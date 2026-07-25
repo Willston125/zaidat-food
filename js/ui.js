@@ -395,11 +395,18 @@
       return;
     }
     var io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) {
-        if (entry.isIntersecting) {
-          entry.target.classList.add("is-visible");
-          io.unobserve(entry.target);
-        }
+      /* Apparition en cascade : les éléments qui entrent ensemble à l'écran
+         se révèlent l'un après l'autre. Le décalage reste court (60 ms) et
+         plafonné, pour rester élégant sans jamais faire attendre. */
+      var visibles = entries.filter(function (e) { return e.isIntersecting; });
+      visibles.sort(function (a, b) {
+        return a.boundingClientRect.top - b.boundingClientRect.top ||
+               a.boundingClientRect.left - b.boundingClientRect.left;
+      });
+      visibles.forEach(function (entry, i) {
+        entry.target.style.transitionDelay = Math.min(i * 60, 300) + "ms";
+        entry.target.classList.add("is-visible");
+        io.unobserve(entry.target);
       });
     }, { threshold: 0.12 });
     els.forEach(function (el) { io.observe(el); });

@@ -46,7 +46,10 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-img { max-width: 100%; display: block; }
+/* `height: auto` est indispensable : sans lui, une image portant des
+   attributs width/height se retrouve étirée dès que son conteneur est
+   plus étroit que sa taille naturelle (la largeur suit, pas la hauteur). */
+img { max-width: 100%; height: auto; display: block; }
 
 h1, h2, h3 { font-family: var(--font-display); line-height: 1.15; margin: 0 0 0.5em; }
 h1 { font-size: clamp(1.9rem, 5vw, 3.1rem); font-weight: 700; }
@@ -286,18 +289,25 @@ a { color: var(--terracotta-deep); }
 }
 
 @media (min-width: 820px) {
-  .hero { min-height: 560px; display: flex; align-items: center; }
+  /* La hauteur suit la largeur : plus l'écran est large, plus le hero
+     doit être haut pour que la vidéo 16/9 ne soit pas rognée à l'excès
+     (sinon le visage en haut ou les plats en bas disparaissent). */
+  .hero { min-height: clamp(560px, 38vw, 740px); display: flex; align-items: center; }
   .hero__media { position: absolute; inset: 0; }
   .hero__media::after {
     content: "";
     position: absolute; inset: 0;
     background: linear-gradient(90deg, rgba(250,243,232,0.96) 0%, rgba(250,243,232,0.88) 30%, rgba(250,243,232,0.35) 55%, rgba(250,243,232,0) 75%);
   }
+  /* Cadrage vertical à 15 % et non au centre : sur un écran large, le
+     format panoramique du hero rogne la vidéo en hauteur, et un cadrage
+     centré coupait le haut du visage de la cuisinière. */
   .hero__media img,
-  .hero__media video { object-position: right center; }
+  .hero__media video { object-position: right 15%; }
   .hero__content { width: 100%; padding: 4rem 0; }
   .hero__content > * { max-width: 46%; }
 }
+
 
 /* ---------- Sections ---------- */
 .section { padding: 3.2rem 0; }
@@ -324,7 +334,8 @@ a { color: var(--terracotta-deep); }
   background: var(--white); color: var(--ink);
   border: 2px solid rgba(62,42,30,0.1); border-radius: 999px;
   padding: 0.55rem 1.1rem; font-weight: 800; font-size: 0.95rem;
-  cursor: pointer; transition: all 0.15s ease; min-height: 46px;
+  cursor: pointer; min-height: 46px;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
 }
 .cat-pill:hover { border-color: var(--terracotta); color: var(--terracotta-deep); }
 .cat-pill[aria-pressed="true"] {
@@ -334,7 +345,9 @@ a { color: var(--terracotta-deep); }
 /* ---------- Grille produits ---------- */
 .product-grid {
   display: grid; gap: 1.2rem;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  /* 210px : permet 3 colonnes dès 768 px (tablette). À 230px, il manquait
+     quelques pixels et la tablette retombait à 2 cartes très larges. */
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
 }
 @media (max-width: 480px) { .product-grid { grid-template-columns: repeat(2, 1fr); gap: 0.8rem; } }
 
@@ -346,6 +359,8 @@ a { color: var(--terracotta-deep); }
   position: relative;
 }
 .card:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
+/* Le fond corail tient lieu d'attente pendant le chargement de la photo :
+   pas de blanc brutal, et aucun saut de mise en page (ratio fixé). */
 .card__imgwrap { position: relative; aspect-ratio: 1 / 1; overflow: hidden; background: var(--coral-soft); }
 .card__img {
   position: absolute; inset: 0;
@@ -437,6 +452,9 @@ a { color: var(--terracotta-deep); }
 .about-grid { display: grid; gap: 2rem; align-items: center; }
 @media (min-width: 820px) { .about-grid { grid-template-columns: 1fr 1.1fr; } }
 .about-grid__img { border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+/* Cadrage maîtrisé : l'image est recadrée, jamais déformée. */
+.about-grid__img img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; }
+@media (min-width: 820px) { .about-grid__img img { aspect-ratio: 4 / 5; } }
 .about-points { list-style: none; padding: 0; margin: 1.2rem 0 0; display: grid; gap: 0.7rem; }
 .about-points li { display: flex; gap: 0.7rem; align-items: baseline; font-weight: 600; }
 .about-points li .icon { color: var(--gold); margin-top: 0.28em; }
@@ -509,7 +527,11 @@ a { color: var(--terracotta-deep); }
 .site-footer h3 { color: #fff; font-size: 1rem; }
 .site-footer a { color: var(--cream); text-decoration: none; }
 .site-footer a:hover { color: var(--coral); text-decoration: underline; }
-.site-footer ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.45rem; font-size: 0.92rem; }
+.site-footer ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.15rem; font-size: 0.92rem; }
+/* Zones tactiles confortables : les liens du pied de page faisaient 20 px
+   de haut, sous le minimum recommandé (24 px). */
+.site-footer li { display: flex; align-items: center; gap: 0.45rem; min-height: 32px; }
+.site-footer li a { display: inline-flex; align-items: center; gap: 0.45rem; min-height: 32px; }
 .site-footer .brand strong { color: #fff; }
 .site-footer .brand small { color: rgba(250,243,232,0.7); }
 .footer-note { margin-top: 2rem; padding-top: 1.2rem; border-top: 1px solid rgba(250,243,232,0.15); font-size: 0.8rem; color: rgba(250,243,232,0.65); display: flex; flex-wrap: wrap; gap: 0.8rem; justify-content: space-between; }

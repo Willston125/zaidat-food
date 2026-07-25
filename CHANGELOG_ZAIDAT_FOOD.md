@@ -1,5 +1,69 @@
 # CHANGELOG — ZAIDAT FOOD
 
+## 2026-07-25 — v8 : audit complet, images déformées et cadrage vidéo
+
+Demande : *« audit complet sur toutes les pages, la responsive aussi, les
+images ne doivent pas être étirées, les animations doivent être modernes. »*
+
+### Le défaut principal : une règle CSS incomplète déformait les images
+
+La règle de base des images était `img { max-width: 100%; display: block; }`.
+Il manquait **`height: auto`**. Sans lui, une image portant des attributs
+`width`/`height` voit sa largeur s'adapter au conteneur mais **pas sa hauteur** :
+elle est donc écrasée.
+
+Mesuré sur la photo de la fondatrice : affichée en **713 × 900 alors qu'elle est
+carrée**, soit **21 % de déformation**. Corrigé à la racine — toutes les images
+du site en bénéficient. La photo est désormais en 713 × 713.
+
+`.about-grid__img img` était par ailleurs la seule image sans cadrage défini :
+elle reçoit maintenant un `object-fit: cover` et un ratio explicite (1/1 sur
+mobile, 4/5 sur ordinateur). **Plus aucune image en `object-fit: fill` sur
+l'ensemble du site.**
+
+### Cadrage de la vidéo : le visage était coupé sur grand écran
+
+Le hero panoramique rogne la vidéo 16/9 en hauteur. Avec un cadrage centré,
+**le haut du visage disparaissait à partir de 1440 px**. Deux corrections :
+
+- cadrage vertical à 15 % au lieu du centre ;
+- hauteur du hero qui suit la largeur : `clamp(560px, 38vw, 740px)`.
+
+Vérifié par le calcul du recadrage réel à 1280, 1440 et 1920 px : le visage
+est préservé partout, et les plats restent visibles jusqu'à 1440 px.
+
+### Mise en page
+
+- **Tablette (768 px) : 3 colonnes au lieu de 2.** La grille demandait 230 px
+  minimum par carte — il manquait 0,4 px pour une troisième colonne, et la
+  tablette affichait 2 cartes de 347 px. Seuil ramené à 210 px ;
+- **Liens du pied de page** : hauteur portée de 20 px à 32 px, au-dessus du
+  minimum recommandé pour le tactile.
+
+### Animations
+
+L'inventaire montre un ensemble sain : aucune propriété coûteuse animée
+(uniquement `opacity`, `transform`, `box-shadow`), durée moyenne 0,34 s,
+maximum 0,5 s, `prefers-reduced-motion` respecté.
+
+- **Apparition en cascade** : les cartes qui entrent ensemble à l'écran se
+  révèlent l'une après l'autre (60 ms d'écart, plafonné à 300 ms) ;
+- `transition: all` remplacé par la liste explicite des propriétés.
+
+**Un essai a été annulé** : un fondu des photos à leur chargement. Il reposait
+sur l'événement `load` pour rendre l'image visible — si cet événement était
+manqué, **la photo restait invisible**. Le risque dépassait le gain esthétique,
+d'autant que l'apparition des cartes assure déjà cet effet. Le fond corail des
+vignettes suffit à masquer l'attente.
+
+### Couverture de l'audit
+
+5 pages × 7 largeurs (360, 390, 430, 768, 1024, 1280, 1440, 1920) :
+aucun débordement horizontal, aucune image déformée, aucune image invisible,
+console propre. Filtrage, panier et navigation revérifiés après modifications.
+
+---
+
 ## 2026-07-25 — v7 : audit des cartes, correction des « clics muets »
 
 Signalement : *« il y a des cartes qui ont des clics muets, ne mènent nulle part. »*
