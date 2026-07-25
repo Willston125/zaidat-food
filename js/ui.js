@@ -146,6 +146,40 @@
     toastTimer = setTimeout(function () { toastEl.classList.remove("is-visible"); }, 2600);
   };
 
+  /* Menu mobile : en-tête, icônes devant chaque lien, et actions en pied.
+     Les icônes rendent la lecture plus rapide sur petit écran. */
+  function enrichirMenuMobile(nav) {
+    if ($(".main-nav__head", nav)) return;
+
+    var head = document.createElement("div");
+    head.className = "main-nav__head";
+    head.innerHTML =
+      "<strong>Menu</strong>" +
+      '<button class="icon-btn" type="button" data-close-nav aria-label="Fermer le menu">' +
+      ZF.icon("close") + "</button>";
+    nav.insertBefore(head, nav.firstChild);
+    head.querySelector("[data-close-nav]").addEventListener("click", function () {
+      if (ZF.closeNav) ZF.closeNav();
+    });
+
+    var icones = { accueil: "house", menu: "cloche", "catégories": "grid",
+                   "à propos": "chef-hat", contact: "chat" };
+    $all("a", nav).forEach(function (a) {
+      var cle = a.textContent.trim().toLowerCase();
+      var nom = icones[cle];
+      if (nom) a.innerHTML = ZF.icon(nom) + "<span>" + esc(a.textContent.trim()) + "</span>";
+    });
+
+    var cta = document.createElement("div");
+    cta.className = "main-nav__cta";
+    var wa = SITE_CONFIG.WHATSAPP_ORDER_NUMBER;
+    cta.innerHTML =
+      '<a class="btn btn--primary" href="index.html#menu">Commander maintenant</a>' +
+      (wa ? '<a class="btn btn--whatsapp" href="https://wa.me/' + esc(wa) +
+        '" target="_blank" rel="noopener">' + ZF.icon("whatsapp") + " Discuter sur WhatsApp</a>" : "");
+    nav.appendChild(cta);
+  }
+
   /* ---------- Header : ombre au scroll + burger ---------- */
   function initHeader() {
     var header = $(".site-header");
@@ -159,18 +193,40 @@
     var toggle = $(".nav-toggle");
     var nav = $(".main-nav");
     if (toggle && nav) {
-      toggle.addEventListener("click", function () {
-        var open = nav.classList.toggle("is-open");
+      enrichirMenuMobile(nav);
+
+      /* Voile sombre : met le menu en valeur et se ferme au toucher */
+      var overlay = document.createElement("div");
+      overlay.className = "nav-overlay";
+      document.body.appendChild(overlay);
+
+      var setOpen = function (open) {
+        nav.classList.toggle("is-open", open);
+        overlay.classList.toggle("is-open", open);
+        header.classList.toggle("nav-is-open", open);
         toggle.setAttribute("aria-expanded", open ? "true" : "false");
         toggle.setAttribute("aria-label", open ? "Fermer la navigation" : "Ouvrir la navigation");
         toggle.innerHTML = ZF.icon(open ? "close" : "menu");
+        /* On empêche la page de défiler derrière le menu ouvert */
+        document.body.style.overflow = open ? "hidden" : "";
+        if (open) {
+          var premier = $("a", nav);
+          if (premier) premier.focus();
+        }
+      };
+      ZF.closeNav = function () { setOpen(false); };
+
+      toggle.addEventListener("click", function () {
+        setOpen(!nav.classList.contains("is-open"));
       });
+      overlay.addEventListener("click", function () { setOpen(false); });
       nav.addEventListener("click", function (e) {
-        if (e.target.tagName === "A") {
-          nav.classList.remove("is-open");
-          toggle.setAttribute("aria-expanded", "false");
-          toggle.setAttribute("aria-label", "Ouvrir la navigation");
-          toggle.innerHTML = ZF.icon("menu");
+        if (e.target.closest("a")) setOpen(false);
+      });
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && nav.classList.contains("is-open")) {
+          setOpen(false);
+          toggle.focus();
         }
       });
     }

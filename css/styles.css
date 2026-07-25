@@ -192,12 +192,22 @@ a { color: var(--terracotta-deep); }
 /* ---------- Header ---------- */
 .site-header {
   position: sticky; top: 0; z-index: 90;
-  background: rgba(250, 243, 232, 0.92);
-  backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(62,42,30,0.08);
   transition: box-shadow 0.2s ease;
 }
+/* ATTENTION : le flou est porté par ce pseudo-élément, jamais par le header
+   lui-même. Un `backdrop-filter` sur le header en ferait la référence de
+   positionnement de ses enfants `position: fixed` — le menu mobile se
+   calait alors sur la hauteur du header (93 px) au lieu de l'écran, et ses
+   liens s'affichaient hors du panneau, sans fond, illisibles. */
+.site-header::before {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background: rgba(250, 243, 232, 0.92);
+  backdrop-filter: blur(10px);
+}
 .site-header.is-scrolled { box-shadow: var(--shadow-sm); }
+/* Menu ouvert : le header passe au-dessus de la barre mobile et du bouton flottant */
+.site-header.nav-is-open { z-index: 150; }
 .site-header__inner {
   display: flex; align-items: center; gap: 1rem;
   min-height: var(--header-h);
@@ -240,18 +250,61 @@ a { color: var(--terracotta-deep); }
 
 @media (max-width: 900px) {
   .main-nav {
-    position: fixed; inset: 0 0 0 auto; width: min(320px, 85vw);
+    position: fixed; inset: 0 0 0 auto; width: min(330px, 86vw);
+    /* Fond pleinement opaque : le menu doit rester lisible quelle que
+       soit la photo ou la section qui défile derrière. */
     background: var(--cream-soft); z-index: 120;
-    flex-direction: column; align-items: stretch; gap: 0.2rem;
-    padding: 5rem 1.3rem 2rem;
-    transform: translateX(100%); transition: transform 0.25s ease, visibility 0s linear 0.25s;
+    flex-direction: column; align-items: stretch; gap: 0.25rem;
+    padding: calc(var(--header-h) + 1.4rem) 1.1rem calc(2rem + env(safe-area-inset-bottom));
+    overflow-y: auto; overscroll-behavior: contain;
+    transform: translateX(100%); transition: transform 0.28s ease, visibility 0s linear 0.28s;
     visibility: hidden;
-    box-shadow: -18px 0 40px rgba(62,42,30,0.18);
+    box-shadow: -18px 0 44px rgba(62,42,30,0.22);
     margin-left: 0;
   }
-  .main-nav.is-open { transform: translateX(0); visibility: visible; transition: transform 0.25s ease; }
-  .main-nav a { padding: 0.85rem 1rem; font-size: 1.05rem; }
+  .main-nav.is-open { transform: translateX(0); visibility: visible; transition: transform 0.28s ease; }
+
+  /* Liens généreux : cible tactile confortable et hiérarchie nette */
+  .main-nav a {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.95rem 1rem; font-size: 1.08rem; font-weight: 700;
+    border-radius: 14px; color: var(--ink);
+    border-bottom: 1px solid rgba(62,42,30,0.07);
+  }
+  .main-nav a:last-of-type { border-bottom: none; }
+  .main-nav a:active { background: var(--coral-soft); }
+  .main-nav a .icon { color: var(--terracotta); }
+
+  /* Titre et bouton de fermeture, en tête du panneau */
+  .main-nav__head {
+    position: absolute; top: 0; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.9rem 1rem; border-bottom: 1px solid rgba(62,42,30,0.1);
+    background: var(--cream);
+  }
+  .main-nav__head strong {
+    font-family: var(--font-display); font-size: 1rem; color: var(--ink);
+  }
+
+  /* Appels à l'action en pied de menu */
+  .main-nav__cta { margin-top: 1.2rem; display: grid; gap: 0.6rem; }
+  .main-nav__cta .btn { width: 100%; }
+
   .nav-toggle { display: inline-flex; }
+
+  /* Voile sombre : fait ressortir le menu et permet de fermer en touchant à côté */
+  .nav-overlay {
+    position: fixed; inset: 0; z-index: 110;
+    background: rgba(30, 18, 12, 0.5);
+    opacity: 0; visibility: hidden;
+    transition: opacity 0.28s ease, visibility 0s linear 0.28s;
+  }
+  .nav-overlay.is-open { opacity: 1; visibility: visible; transition: opacity 0.28s ease; }
+}
+
+/* Sur ordinateur, ces éléments propres au menu mobile n'existent pas */
+@media (min-width: 901px) {
+  .main-nav__head, .main-nav__cta, .nav-overlay { display: none; }
 }
 
 /* ---------- Recherche ---------- */
