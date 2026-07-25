@@ -47,18 +47,17 @@
   }
   function majEtat() {
     var modif = aDesModifs();
-    var nbImg = Object.keys(imagesEnAttente).length;
     var el = $("#etat-modifs");
     if (modif) {
-      el.textContent = "Modifications non publiées" + (nbImg ? " (" + nbImg + " photo" + (nbImg > 1 ? "s" : "") + ")" : "");
+      el.textContent = "Modifications non enregistrées";
       el.classList.add("a-publier");
     } else {
-      el.textContent = "Tout est publié";
+      el.textContent = "Tout est enregistré";
       el.classList.remove("a-publier");
     }
-    $("#btn-publier").disabled = !modif || !GH.estConnecte();
+    $("#btn-publier").disabled = !modif || !BACK.estConnecte();
     $("#nb-produits").textContent = D.produits.length;
-    $("#pastille-connexion").hidden = GH.estConnecte();
+    $("#pastille-connexion").hidden = BACK.estConnecte();
   }
 
   /* Évite de perdre un travail en cours en fermant l'onglet */
@@ -79,25 +78,13 @@
     var vue = $("#adm-vue");
     vue.innerHTML = '<div class="adm-chargement">Chargement des données du site…</div>';
 
-    var lecture;
-    if (GH.estConnecte()) {
-      chargeDepuisGitHub = true;
-      lecture = Promise.all([GH.lireFichier("js/products.js"), GH.lireFichier("js/config.js")])
-        .then(function (r) { return [r[0].texte, r[1].texte]; });
-    } else {
-      chargeDepuisGitHub = false;
-      lecture = Promise.all([
-        fetch("../js/products.js").then(function (r) { return r.text(); }),
-        fetch("../js/config.js").then(function (r) { return r.text(); }),
-      ]);
-    }
-
-    return lecture
-      .then(function (sources) {
-        var d = extraireDonnees(sources[0], sources[1]);
-        D.categories = d.CATEGORIES;
-        D.produits = d.PRODUCTS;
-        D.config = d.SITE_CONFIG;
+    return BACK.charger()
+      .then(function (d) {
+        D.categories = d.categories;
+        D.produits = d.produits;
+        D.config = d.config;
+        D.source = d.source;
+        D.baseVide = !!d.baseVide;
         original = instantane();
         imagesEnAttente = {};
         majEtat();
@@ -107,7 +94,7 @@
         vue.innerHTML =
           '<div class="message message--erreur"><strong>Impossible de charger les données</strong>' +
           esc(err.message) + "</div>" +
-          '<p>Ouvrez l\'onglet <strong>Connexion GitHub</strong> pour vérifier les réglages.</p>';
+          '<p>Ouvrez l\'onglet <strong>Connexion</strong> pour vérifier les réglages.</p>';
       });
   }
 
@@ -160,10 +147,11 @@
     return Number(v).toLocaleString("fr-FR") + " " + (D.config.currency || "KMF");
   }
 
-  /* Une image peut être déjà publiée (chemin) ou en attente (dataURL) */
+  /* Une photo vient soit de la base (adresse complète), soit des
+     fichiers du site (chemin relatif, à préfixer pour l'aperçu). */
   function apercuImage(chemin) {
     if (!chemin) return null;
-    if (imagesEnAttente[chemin]) return imagesEnAttente[chemin];
+    if (/^(https?:|data:|blob:)/.test(chemin)) return chemin;
     return "../" + chemin;
   }
 
@@ -459,27 +447,54 @@
     $("[data-annuler]", modale).addEventListener("click", fermer);
     modale.addEventListener("click", function (e) { if (e.target === modale) fermer(); });
 
-    $("[data-valider]", modale).addEventListener("click", function () {
+    var valider = $("[data-valider]", modale);
+    valider.addEventListener("click", function () {
       if (!brouillon.slug) { toast("Renseignez d'abord le nom du produit", true); fermer(); return; }
-      var sorties = crop.exporter();
-      var dossier = cle === "produit" ? "products" : "lifestyle";
-      var poids = 0;
+      if (!BACK.estConnecte()) {
+        toast("Connectez-vous d'abord : la photo doit être envoyée à la base", true);
+        return;
+      }
 
+      var sorties = crop.exporter();
+      var dossier = cle === "produit" ? "produits" : "lifestyle";
+      var poids = sorties.reduce(function (t, s) { return t + Cropper.poidsKo(s.dataURL); }, 0);
+
+      valider.disabled = true;
+      valider.textContent = "Envoi de la photo…";
+
+      /* Les deux tailles partent l'une après l'autre : sur une connexion
+         mobile, deux envois simultanés échouent plus souvent qu'ils
+         n'accélèrent quoi que ce soit. */
+      var urls = {};
+      var chaine = Promise.resolve();
       sorties.forEach(function (s) {
-        var chemin = "assets/img/" + dossier + "/" + brouillon.slug + "-" + s.taille + ".jpg";
-        imagesEnAttente[chemin] = s.dataURL;
-        poids += Cropper.poidsKo(s.dataURL);
-        if (s.taille === 900) {
-          if (cle === "produit") brouillon.productImage = chemin; else brouillon.lifestyleImage = chemin;
-        } else {
-          if (cle === "produit") brouillon.productThumb = chemin; else brouillon.lifestyleThumb = chemin;
-        }
+        chaine = chaine.then(function () {
+          return BACK.envoyerPhoto(s.dataURL, brouillon.slug, dossier, s.taille)
+            .then(function (url) { urls[s.taille] = url; });
+        });
       });
 
-      fermer();
-      rafraichirSlot(slot, cle);
-      majEtat();
-      toast("Photo prête (" + poids + " Ko au total)");
+      chaine
+        .then(function () {
+          var grande = urls[900] || urls[450];
+          var petite = urls[450] || urls[900];
+          if (cle === "produit") {
+            brouillon.productImage = grande;
+            brouillon.productThumb = petite;
+          } else {
+            brouillon.lifestyleImage = grande;
+            brouillon.lifestyleThumb = petite;
+          }
+          fermer();
+          rafraichirSlot(slot, cle);
+          majEtat();
+          toast("Photo envoyée (" + poids + " Ko)");
+        })
+        .catch(function (err) {
+          valider.disabled = false;
+          valider.textContent = "Réessayer";
+          toast(err.message, true);
+        });
     });
   }
 
@@ -803,93 +818,81 @@
      VUE : CONNEXION GITHUB
      ========================================================= */
   function vueConnexion() {
-    var r = GH.lireReglages();
+    var configure = BACK.estConfigure();
+    var connecte = BACK.estConnecte();
+    var email = BACK.email();
+
     return (
-      '<div class="adm-vue__tete"><div><h1>Connexion GitHub</h1>' +
-      "<p>C'est ce qui permet au bouton « Publier » d'envoyer vos modifications sur le site en ligne.</p></div></div>" +
+      '<div class="adm-vue__tete"><div><h1>Connexion</h1>' +
+      "<p>Connectez-vous pour enregistrer vos modifications. Elles apparaissent sur le site aussitôt.</p></div></div>" +
 
-      (GH.estConnecte()
-        ? '<div class="message message--ok"><strong>Connecté</strong>Dépôt <code>' + esc(r.owner) + "/" + esc(r.repo) + "</code>, branche <code>" + esc(r.branch || "main") + "</code>.</div>"
-        : '<div class="message message--alerte"><strong>Pas encore connecté</strong>Vous pouvez consulter et préparer des modifications, mais pas les publier.</div>') +
+      (!configure
+        ? '<div class="message message--alerte"><strong>Base de données pas encore reliée</strong>' +
+          "Le dashboard fonctionne en consultation : vous voyez les produits, mais le bouton Enregistrer reste inactif.<br>" +
+          "Pour l'activer, remplissez <code>js/supabase-config.js</code> — la marche à suivre est dans <code>admin/GUIDE_DASHBOARD.md</code>.</div>"
+        : connecte
+          ? '<div class="message message--ok"><strong>Connectée</strong>Vous êtes identifiée comme <code>' + esc(email || "") + "</code>. Vos modifications sont enregistrées directement.</div>"
+          : '<div class="message message--alerte"><strong>Pas encore connectée</strong>Vous pouvez tout consulter et préparer, mais pas enregistrer.</div>') +
 
-      '<div class="bloc"><h3>Réglages du dépôt</h3>' +
-      '<div class="champ-double">' +
-      '<div class="champ"><label for="g-owner">Compte GitHub</label>' +
-      '<input type="text" id="g-owner" value="' + esc(r.owner || "") + '" placeholder="Willston125"></div>' +
-      '<div class="champ"><label for="g-repo">Nom du dépôt</label>' +
-      '<input type="text" id="g-repo" value="' + esc(r.repo || "") + '" placeholder="zaidat-food"></div>' +
-      "</div>" +
-      '<div class="champ"><label for="g-branch">Branche</label>' +
-      '<input type="text" id="g-branch" value="' + esc(r.branch || "main") + '"></div>' +
-      '<div class="champ"><label for="g-token">Clé d\'accès</label>' +
-      '<input type="password" id="g-token" value="' + esc(r.token || "") + '" placeholder="github_pat_…" autocomplete="off">' +
-      '<p class="aide">Elle reste dans ce navigateur et n\'est envoyée qu\'à GitHub. Elle n\'est jamais publiée sur le site.</p></div>' +
-      '<button class="btn btn--primary" id="g-verifier">Vérifier et enregistrer</button> ' +
-      (GH.estConnecte() ? '<button class="btn btn--ghost" id="g-deconnecter">Se déconnecter</button>' : "") +
-      '<div id="g-resultat" style="margin-top:1rem"></div></div>' +
+      (configure && !connecte
+        ? '<div class="bloc"><h3>Se connecter</h3>' +
+          '<div class="champ"><label for="sb-email">Adresse email</label>' +
+          '<input type="email" id="sb-email" autocomplete="username" placeholder="vous@exemple.com"></div>' +
+          '<div class="champ"><label for="sb-mdp">Mot de passe</label>' +
+          '<input type="password" id="sb-mdp" autocomplete="current-password"></div>' +
+          '<button class="btn btn--primary" id="sb-connecter">Se connecter</button>' +
+          '<div id="sb-resultat" style="margin-top:1rem"></div></div>'
+        : "") +
 
-      '<div class="bloc"><h3>Comment créer la clé d\'accès</h3>' +
-      "<ol style=\"padding-left:1.2rem;line-height:1.8\">" +
-      "<li>Sur GitHub, ouvrez <strong>Settings</strong> (menu de votre photo de profil), tout en bas <strong>Developer settings</strong>.</li>" +
-      "<li>Cliquez <strong>Personal access tokens</strong> puis <strong>Fine-grained tokens</strong>, et <strong>Generate new token</strong>.</li>" +
-      "<li>Donnez un nom (ex. « Dashboard ZAIDAT »), une date d'expiration, et dans <strong>Repository access</strong> choisissez <strong>Only select repositories</strong> → votre dépôt.</li>" +
-      "<li>Dans <strong>Permissions → Repository permissions</strong>, réglez <strong>Contents</strong> sur <strong>Read and write</strong>. C'est la seule permission nécessaire.</li>" +
-      "<li>Validez, copiez la clé affichée, et collez-la ci-dessus.</li>" +
-      "</ol>" +
-      '<div class="message message--alerte" style="margin-top:0.8rem"><strong>À savoir</strong>' +
-      "Cette clé donne le droit de modifier votre dépôt. Ne la partagez pas, et ne l'utilisez que sur un ordinateur ou un téléphone qui vous appartient. " +
-      "En cas de doute, supprimez-la sur GitHub et créez-en une nouvelle.</div></div>"
+      (connecte
+        ? '<div class="bloc"><h3>Session</h3>' +
+          "<p>Restez connectée sur votre téléphone ou votre ordinateur personnel. Sur un appareil partagé, déconnectez-vous après usage.</p>" +
+          '<button class="btn btn--ghost" id="sb-deconnecter">Se déconnecter</button></div>'
+        : "") +
+
+      '<div class="bloc"><h3>Où sont enregistrées les données ?</h3>' +
+      "<p>Les produits, les prix et les textes sont dans une base de données Supabase. Les photos sont stockées au même endroit. " +
+      "Le site les lit à chaque visite : dès que vous enregistrez, tout le monde voit la nouvelle version.</p>" +
+      "<p>Si la base devient injoignable, le site continue de fonctionner avec les produits inscrits dans ses fichiers : " +
+      "vos visiteurs ne tombent jamais sur une page vide.</p></div>"
     );
   }
 
   function brancherConnexion() {
-    var btn = $("#g-verifier");
-    if (!btn) return;
-
-    btn.addEventListener("click", function () {
-      var reglages = {
-        owner: $("#g-owner").value.trim(),
-        repo: $("#g-repo").value.trim(),
-        branch: $("#g-branch").value.trim() || "main",
-        token: $("#g-token").value.trim(),
-      };
-      if (!reglages.owner || !reglages.repo || !reglages.token) {
-        $("#g-resultat").innerHTML = '<div class="message message--erreur">Remplissez les quatre champs.</div>';
-        return;
-      }
-      GH.ecrireReglages(reglages);
-      $("#g-resultat").innerHTML = '<div class="message message--info">Vérification…</div>';
-
-      GH.verifier()
-        .then(function (info) {
-          if (!info.peutEcrire) {
-            $("#g-resultat").innerHTML =
-              '<div class="message message--erreur"><strong>Lecture seule</strong>' +
-              "La clé n'a pas le droit d'écriture sur ce dépôt. Vérifiez que <code>Contents</code> est réglé sur <code>Read and write</code>.</div>";
-            return;
-          }
-          return GH.dernierCommit().then(function (c) {
-            $("#g-resultat").innerHTML =
-              '<div class="message message--ok"><strong>Connexion réussie</strong>' +
-              "Dépôt <code>" + esc(info.nom) + "</code>" + (info.prive ? " (privé)" : "") + ".<br>" +
-              "Dernière publication : « " + esc(c.message) + " » le " +
-              new Date(c.date).toLocaleString("fr-FR") + ".</div>";
+    var btn = $("#sb-connecter");
+    if (btn) {
+      var resultat = $("#sb-resultat");
+      var lancer = function () {
+        var email = $("#sb-email").value.trim();
+        var mdp = $("#sb-mdp").value;
+        if (!email || !mdp) {
+          resultat.innerHTML = '<div class="message message--erreur">Renseignez votre email et votre mot de passe.</div>';
+          return;
+        }
+        btn.disabled = true;
+        resultat.innerHTML = '<div class="message message--info">Connexion…</div>';
+        BACK.connexion(email, mdp)
+          .then(function () {
+            toast("Connexion réussie");
             majEtat();
             return charger();
+          })
+          .catch(function (err) {
+            btn.disabled = false;
+            resultat.innerHTML = '<div class="message message--erreur"><strong>Échec</strong>' + esc(err.message) + "</div>";
           });
-        })
-        .catch(function (err) {
-          $("#g-resultat").innerHTML = '<div class="message message--erreur"><strong>Échec</strong>' + esc(err.message) + "</div>";
-          majEtat();
-        });
-    });
+      };
+      btn.addEventListener("click", lancer);
+      $("#sb-mdp").addEventListener("keydown", function (e) { if (e.key === "Enter") lancer(); });
+    }
 
-    var dec = $("#g-deconnecter");
+    var dec = $("#sb-deconnecter");
     if (dec) dec.addEventListener("click", function () {
-      if (!confirm("Se déconnecter ? La clé sera effacée de ce navigateur.")) return;
-      GH.effacerReglages();
-      majEtat(); rendre();
-      toast("Déconnecté");
+      if (aDesModifs() && !confirm("Des modifications ne sont pas enregistrées. Se déconnecter quand même ?")) return;
+      BACK.deconnexion().then(function () {
+        majEtat(); rendre();
+        toast("Déconnectée");
+      });
     });
   }
 
@@ -898,21 +901,10 @@
      ========================================================= */
   function ouvrirPublication() {
     var controle = Serialize.verifier(D.categories, D.produits, D.config);
-    var sourceProduits = Serialize.produitsJS(D.categories, D.produits);
-    var sourceConfig = Serialize.configJS(D.config);
-
-    /* Filet de sécurité : on exécute les fichiers générés avant de les envoyer */
-    var testP = Serialize.testerFichierGenere(sourceProduits, "PRODUCTS");
-    var testC = Serialize.testerFichierGenere(sourceConfig, "SITE_CONFIG");
 
     var html = "";
-    if (!testP.ok || !testC.ok) {
-      html += '<div class="message message--erreur"><strong>Publication bloquée</strong>' +
-        esc((testP.ok ? "" : testP.message) + " " + (testC.ok ? "" : testC.message)) +
-        "<br>Rien n'a été envoyé. Signalez ce message : c'est un défaut du dashboard, pas de vos données.</div>";
-    }
     if (controle.erreurs.length) {
-      html += '<div class="message message--erreur"><strong>À corriger avant de publier</strong><ul>' +
+      html += '<div class="message message--erreur"><strong>À corriger avant d\'enregistrer</strong><ul>' +
         controle.erreurs.map(function (e) { return "<li>" + esc(e) + "</li>"; }).join("") + "</ul></div>";
     }
     if (controle.alertes.length) {
@@ -922,68 +914,50 @@
         "</ul></div>";
     }
 
-    var nbImages = Object.keys(imagesEnAttente).length;
-    var poids = Object.keys(imagesEnAttente).reduce(function (t, k) { return t + Cropper.poidsKo(imagesEnAttente[k]); }, 0);
-
-    html += '<div class="message message--info"><strong>Ce qui va être envoyé</strong>' +
+    html += '<div class="message message--info"><strong>Ce qui va être enregistré</strong>' +
       D.produits.length + " produit(s), " + D.categories.length + " catégorie(s), et les textes du site." +
-      (nbImages ? "<br>" + nbImages + " fichier(s) photo, " + poids + " Ko au total." : "<br>Aucune nouvelle photo.") +
-      "<br>Le site en ligne se met à jour tout seul, environ une minute après.</div>";
+      "<br>Le site affiche la nouvelle version immédiatement, dès le prochain rafraîchissement.</div>";
 
     $("#pub-corps").innerHTML = html;
-    $("#pub-confirmer").disabled = !controle.valide || !testP.ok || !testC.ok;
-    $("#pub-confirmer").textContent = "Publier maintenant";
+    $("#pub-confirmer").disabled = !controle.valide;
+    $("#pub-confirmer").textContent = "Enregistrer maintenant";
     $("#modale-publier").hidden = false;
 
-    $("#pub-confirmer").onclick = function () { lancerPublication(sourceProduits, sourceConfig); };
+    $("#pub-confirmer").onclick = lancerPublication;
   }
 
-  function lancerPublication(sourceProduits, sourceConfig) {
+  function lancerPublication() {
     var bouton = $("#pub-confirmer");
     bouton.disabled = true;
     var journal = document.createElement("div");
     journal.className = "message message--info";
-    journal.innerHTML = "<strong>Publication en cours</strong><span id=\"pub-etape\">Préparation…</span>";
+    journal.innerHTML = '<strong>Enregistrement en cours</strong><span id="pub-etape">Préparation…</span>';
     $("#pub-corps").appendChild(journal);
 
-    var images = Object.keys(imagesEnAttente).map(function (chemin) {
-      return { chemin: chemin, base64: Cropper.base64Seul(imagesEnAttente[chemin]) };
-    });
-
-    var message = "Mise a jour du site depuis le dashboard\n\n" +
-      D.produits.length + " produits, " + D.categories.length + " categories" +
-      (images.length ? ", " + images.length + " fichiers photo" : "");
-
-    GH.publier(
-      [
-        { chemin: "js/products.js", contenu: sourceProduits },
-        { chemin: "js/config.js", contenu: sourceConfig },
-      ],
-      images,
-      message,
-      function (etape) { $("#pub-etape").textContent = etape; }
-    )
-      .then(function (res) {
+    BACK.enregistrer(D, function (fait, total, nom) {
+      var etape = $("#pub-etape");
+      if (etape) etape.textContent = fait + " / " + total + " — " + nom;
+    })
+      .then(function () {
         original = instantane();
         imagesEnAttente = {};
         majEtat();
         journal.className = "message message--ok";
         journal.innerHTML =
-          "<strong>Publié</strong>Enregistré sous <code>" + esc(res.sha) + "</code>. " +
-          "Le site en ligne se met à jour dans la minute qui suit.<br>" +
-          '<a href="' + esc(res.url) + '" target="_blank" rel="noopener">Voir la modification sur GitHub</a>';
+          "<strong>Enregistré</strong>Le site est à jour. " +
+          'Ouvrez <a href="../index.html" target="_blank" rel="noopener">le site</a> pour vérifier.';
         bouton.textContent = "Fermer";
         bouton.disabled = false;
         bouton.onclick = function () { $("#modale-publier").hidden = true; rendre(); };
-        toast("Modifications publiées");
+        toast("Modifications enregistrées");
       })
       .catch(function (err) {
         journal.className = "message message--erreur";
-        journal.innerHTML = "<strong>Échec de la publication</strong>" + esc(err.message) +
+        journal.innerHTML = "<strong>Échec de l'enregistrement</strong>" + esc(err.message) +
           "<br>Vos modifications sont toujours là : vous pouvez réessayer.";
         bouton.disabled = false;
         bouton.textContent = "Réessayer";
-        toast("La publication a échoué", true);
+        toast("L'enregistrement a échoué", true);
       });
   }
 
@@ -1040,7 +1014,7 @@
   /* ---------- Démarrage ---------- */
   document.addEventListener("DOMContentLoaded", function () {
     initNavigation();
-    if (!GH.estConnecte()) {
+    if (!BACK.estConnecte()) {
       vueCourante = "connexion";
       $all(".adm-nav__item").forEach(function (b) {
         b.classList.toggle("is-active", b.getAttribute("data-vue") === "connexion");

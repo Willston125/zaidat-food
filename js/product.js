@@ -309,5 +309,5 @@
     ZF.bindImageFallbacks(grid);
   }
 
-  document.addEventListener("DOMContentLoaded", render);
+  ZF.pret(render);
 })();

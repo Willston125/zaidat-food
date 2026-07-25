@@ -523,7 +523,7 @@
   }
 
   /* ---------- Démarrage ---------- */
-  document.addEventListener("DOMContentLoaded", function () {
+  ZF.pret(function () {
     initHeader();
     initDrawer();
     initMobileBar();

@@ -192,7 +192,9 @@
     });
   }
 
-  document.addEventListener("DOMContentLoaded", function () {
+  /* On attend les données (Supabase ou fichiers locaux) avant
+     d'afficher, pour ne jamais montrer un prix qui va changer. */
+  ZF.pret(function () {
     initHeroVideo();
     renderConfigTexts();
     renderCategories();
