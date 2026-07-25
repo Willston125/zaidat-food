@@ -1,5 +1,57 @@
 # CHANGELOG — ZAIDAT FOOD
 
+## 2026-07-25 — v6 : hero en vidéo + mise en ligne
+
+### Le hero passe en vidéo
+
+L'image fixe du hero est remplacée par la vidéo officielle `hero vidéo.mp4`
+(même personnage, même composition : visage à droite, mur libre à gauche — le
+dégradé et l'emplacement du texte restent donc valables).
+
+**Optimisation, essentielle pour les connexions comoriennes :**
+
+| | Avant | Après |
+|---|---|---|
+| Fichier source | 9,5 Mo (1920×1080, 9,5 Mbps, piste audio) | — |
+| Version ordinateur | — | **432 Ko** (1280×720) |
+| Version téléphone | — | **188 Ko** (854×480) |
+
+Soit **22 fois plus léger** que l'original. La piste audio a été supprimée
+(inutile : la lecture automatique exige d'être muette).
+
+**Chargement respectueux des données du visiteur** (`initHeroVideo`) :
+
+- une image d'attente s'affiche **instantanément** (96 Ko, extraite de la vidéo
+  elle-même : aucun changement d'image visible au démarrage) ;
+- la vidéo n'est téléchargée qu'ensuite, et **seulement si la connexion s'y
+  prête** — elle est ignorée si le mode économie de données est activé, si la
+  connexion est en 2G, ou si le visiteur a demandé de réduire les animations ;
+- la version légère est servie sous 900 px de large ;
+- lecture muette, en boucle, sans plein écran forcé (`playsinline`) ;
+- si le navigateur refuse la lecture automatique, l'image d'attente reste —
+  aucun écran vide possible.
+
+`assets/img/hero-960.jpg`, devenu inutile, a été supprimé.
+
+### Mise en ligne
+
+- Dépôt Git initialisé, `.gitignore` excluant les originaux lourds
+  (`produits/`, `lifestyle produit/`, `archive/`, vidéo et images sources) :
+  le dépôt ne pèse que **5,4 Mo** ;
+- `.gitattributes` pour normaliser les fins de ligne ;
+- `vercel.json` : `cleanUrls: false` (indispensable — sans lui les liens
+  `produit.html?p=slug` perdent leur paramètre), cache d'un an sur les images
+  et la vidéo, cache court sur le HTML/CSS/JS ;
+- code publié sur **<https://github.com/Willston125/zaidat-food>** (dépôt privé).
+
+**Vercel : non déployé.** Le jeton d'authentification Vercel présent sur la
+machine a expiré (« Not authorized »), et la reconnexion demande une
+identification personnelle. La marche à suivre est décrite dans le README —
+l'import du dépôt depuis <https://vercel.com/new> prend une minute et active
+ensuite le redéploiement automatique à chaque `git push`.
+
+---
+
 ## 2026-07-25 — v5 : commande express, le formulaire devient facultatif
 
 Demande : *« laisser un bouton WhatsApp pour discuter directement… je veux que

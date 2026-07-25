@@ -22,20 +22,44 @@ Puis ouvrir <http://localhost:8123>.
 > Le fichier `serve.json` (`cleanUrls: false`) est indispensable avec `serve` :
 > sans lui, la redirection `produit.html → /produit` perd le paramètre `?p=slug`.
 
-## Déployer
+## Dépôt GitHub
 
-Le site est 100 % statique : déposer l'ensemble du dossier (sauf `archive/`,
-`produits/`, `lifestyle produit/` et les fichiers sources d'images qui ne sont
-pas nécessaires en production — seuls `assets/`, `css/`, `js/`, les `.html`,
-`robots.txt` et `serve.json` suffisent) sur :
+Le code est publié sur **<https://github.com/Willston125/zaidat-food>** (dépôt privé).
+
+```bash
+git add -A
+git commit -m "Description de la modification"
+git push
+```
+
+## Déployer sur Vercel (recommandé)
+
+1. Aller sur <https://vercel.com/new> et se connecter avec le compte GitHub ;
+2. importer le dépôt **zaidat-food** ;
+3. laisser tous les réglages par défaut — Framework : *Other*, aucune commande
+   de build, dossier racine `/` (le site est statique, `vercel.json` fait le reste) ;
+4. cliquer sur **Deploy**.
+
+Ensuite, **chaque `git push` redéploie le site automatiquement**.
+
+Le fichier `vercel.json` est déjà configuré : `cleanUrls: false` (indispensable
+pour que les liens `produit.html?p=slug` fonctionnent), cache long sur les
+images et la vidéo, cache court sur le HTML/CSS/JS.
+
+## Autres hébergeurs
+
+Le site est 100 % statique. Les dossiers `archive/`, `produits/`,
+`lifestyle produit/` et les fichiers sources lourds (`hero vidéo.mp4`,
+`hero image.png`, `zaidat food logo.png`) **ne sont pas versionnés** : ce sont
+vos originaux de sauvegarde, conservés uniquement sur votre ordinateur. Les
+versions optimisées pour le web se trouvent dans `assets/`.
 
 - **Netlify** : glisser-déposer le dossier — conserve les `.html` par défaut ;
-- **Vercel** : `vercel deploy` — `serve.json` est pris en compte ;
-- **GitHub Pages** : pousser le dossier et activer Pages.
+- **GitHub Pages** : activer Pages sur le dépôt.
 
 Après déploiement :
 1. renseigner le domaine dans `robots.txt` (ligne `Sitemap:` en commentaire) ;
-2. vérifier `commande.html` sur téléphone (envoi WhatsApp réel).
+2. vérifier la commande sur téléphone (envoi WhatsApp réel).
 
 ## Configuration — les 2 réglages indispensables
 
