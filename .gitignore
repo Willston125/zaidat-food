@@ -1,0 +1,19 @@
+# Fichiers sources lourds (originaux non nécessaires en ligne)
+# Les versions optimisées pour le web sont dans assets/ et sont versionnées.
+produits/
+lifestyle produit/
+archive/
+hero image.png
+hero vidéo.mp4
+zaidat food logo.png
+
+# Système
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Outils
+node_modules/
+.vercel
+.cache/
+*.log

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ma commande — ZAIDAT FOOD</title>
+  <meta name="description" content="Vérifiez votre panier, renseignez vos informations et envoyez votre commande ZAIDAT FOOD via WhatsApp.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" type="image/png" href="assets/img/favicon-64.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700;6..12,800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Aller au contenu principal</a>
+
+  <div class="topbar" id="info-bar" role="note"></div>
+
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="brand" href="index.html" aria-label="ZAIDAT FOOD — retour à l'accueil">
+        <img src="assets/img/logo-256.png" alt="" width="46" height="46">
+        <span><strong>ZAIDAT FOOD</strong><small>Cuisine artisanale</small></span>
+      </a>
+      <nav class="main-nav" id="main-nav" aria-label="Navigation principale">
+        <a href="index.html">Accueil</a>
+        <a href="index.html#menu">Menu</a>
+        <a href="index.html#categories">Catégories</a>
+        <a href="index.html#a-propos">À propos</a>
+        <a href="index.html#contact">Contact</a>
+      </nav>
+      <div class="header-actions">
+        <button class="icon-btn" type="button" data-open-cart aria-label="Ouvrir le panier"><svg class="icon" aria-hidden="true"><use href="#i-basket"></use></svg><span class="cart-badge" data-cart-count hidden>0</span></button>
+        <button class="icon-btn nav-toggle" type="button" aria-expanded="false" aria-controls="main-nav" aria-label="Ouvrir la navigation"><svg class="icon" aria-hidden="true"><use href="#i-menu"></use></svg></button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="container">
+      <h1 style="margin-top:1.8rem">Votre commande</h1>
+
+      <div class="checkout-grid">
+        <div>
+          <!-- Panier -->
+          <section class="checkout-panel" id="step-1" aria-labelledby="step-1-title">
+            <h2 id="step-1-title">Votre panier</h2>
+            <div id="step-1-content"></div>
+            <div id="order-actions"></div>
+            <p style="margin:1rem 0 0"><a href="index.html#menu">Ajouter d'autres produits</a></p>
+          </section>
+
+          <!-- Informations facultatives -->
+          <details class="checkout-panel optional-details" id="details-panel">
+            <summary>
+              <span>Ajouter mes informations <em>(facultatif)</em></span>
+              <span class="optional-details__hint">Nom, zone, date souhaitée… Sinon, tout se règle dans la conversation WhatsApp.</span>
+            </summary>
+            <form id="order-form" novalidate>
+              <div class="form-grid">
+                <div class="field">
+                  <label for="f-nom">Nom</label>
+                  <input type="text" id="f-nom" name="nom" autocomplete="name">
+                </div>
+                <div class="field">
+                  <label for="f-tel">Téléphone</label>
+                  <input type="tel" id="f-tel" name="tel" autocomplete="tel" inputmode="tel" placeholder="Ex. +269 3XX XX XX" aria-describedby="f-tel-error">
+                  <p class="field-error" id="f-tel-error" aria-live="polite"></p>
+                </div>
+                <div class="field">
+                  <label for="f-mode">Mode de récupération</label>
+                  <select id="f-mode" name="mode">
+                    <option value="">Choisir…</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="f-zone">Zone / adresse</label>
+                  <input type="text" id="f-zone" name="zone" autocomplete="street-address" placeholder="Quartier, ville…">
+                </div>
+                <div class="field">
+                  <label for="f-date">Date souhaitée</label>
+                  <input type="date" id="f-date" name="date">
+                </div>
+                <div class="field">
+                  <label for="f-heure">Heure souhaitée</label>
+                  <input type="time" id="f-heure" name="heure">
+                </div>
+                <div class="field span-2">
+                  <label for="f-paiement">Moyen de paiement</label>
+                  <select id="f-paiement" name="paiement"></select>
+                </div>
+                <div class="field span-2">
+                  <label for="f-remarque">Remarque (allergies, précisions…)</label>
+                  <textarea id="f-remarque" name="remarque" maxlength="400"></textarea>
+                </div>
+              </div>
+              <p class="cart-note" id="details-feedback" aria-live="polite">Ces informations sont ajoutées automatiquement à votre message WhatsApp.</p>
+            </form>
+          </details>
+
+          <!-- Aperçu du message envoyé -->
+          <details class="checkout-panel optional-details" id="preview-panel">
+            <summary>
+              <span>Voir le message qui sera envoyé</span>
+              <span class="optional-details__hint">Vous pourrez encore le modifier dans WhatsApp avant l'envoi.</span>
+            </summary>
+            <div class="wa-preview" id="wa-preview"></div>
+          </details>
+        </div>
+
+        <aside class="checkout-panel" aria-label="Bon à savoir">
+          <h2>Bon à savoir</h2>
+          <ul class="product-meta">
+            <li><svg class="icon icon--lg" aria-hidden="true"><use href="#i-whatsapp"></use></svg><span><strong>Commande en un clic :</strong> aucun formulaire obligatoire. Votre message part sur WhatsApp et ZAIDAT FOOD vous répond directement.</span></li>
+            <li><svg class="icon icon--lg" aria-hidden="true"><use href="#i-house"></use></svg><span>Chaque commande est préparée maison, avec soin.</span></li>
+            <li><svg class="icon icon--lg" aria-hidden="true"><use href="#i-scooter"></use></svg><span id="delivery-note">Livraison selon disponibilité — précisez votre zone.</span></li>
+            <li><svg class="icon icon--lg" aria-hidden="true"><use href="#i-wallet"></use></svg><span>Les prix non affichés sont confirmés dans la conversation, avant toute préparation.</span></li>
+          </ul>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-note" style="border:none;margin:0;padding:0">
+        <span>© <span id="footer-year">2026</span> ZAIDAT FOOD — <a href="index.html">Accueil</a> · <a href="mentions-legales.html">Mentions légales</a> · <a href="confidentialite.html">Confidentialité</a></span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/icons.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/products.js"></script>
+  <script src="js/cart.js"></script>
+  <script src="js/whatsapp.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/checkout.js"></script>
+</body>
+</html>

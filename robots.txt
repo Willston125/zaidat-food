@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /commande.html
+Disallow: /mentions-legales.html
+Disallow: /confidentialite.html
+
+# Sitemap : à ajouter après le déploiement, une fois le domaine connu.
+# Sitemap: https://votre-domaine/sitemap.xml

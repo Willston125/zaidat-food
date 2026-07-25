@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZAIDAT FOOD — Cuisine artisanale comorienne, plats et douceurs maison</title>
+  <meta name="description" content="Plats, gâteaux, snacks et douceurs préparés avec amour par ZAIDAT FOOD. Découvrez le menu, composez votre panier et commandez simplement via WhatsApp.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="ZAIDAT FOOD — Des saveurs préparées avec amour">
+  <meta property="og:description" content="Plats, gâteaux, snacks et douceurs maison. Commande simple via WhatsApp.">
+  <meta property="og:image" content="assets/img/hero-1672.jpg">
+  <meta property="og:locale" content="fr_FR">
+  <link rel="icon" type="image/png" href="assets/img/favicon-64.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700;6..12,800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FoodEstablishment",
+    "name": "ZAIDAT FOOD",
+    "description": "Cuisine artisanale comorienne : plats, gâteaux, snacks et douceurs maison, préparés sur commande.",
+    "servesCuisine": "Comorienne",
+    "priceRange": "KMF"
+  }
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Aller au contenu principal</a>
+
+  <!-- 1. Barre d'information -->
+  <div class="topbar" id="info-bar" role="note"></div>
+
+  <!-- 2. Header -->
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="brand" href="index.html" aria-label="ZAIDAT FOOD — retour à l'accueil">
+        <img src="assets/img/logo-256.png" alt="" width="46" height="46">
+        <span><strong>ZAIDAT FOOD</strong><small>Cuisine artisanale</small></span>
+      </a>
+      <nav class="main-nav" id="main-nav" aria-label="Navigation principale">
+        <a href="index.html">Accueil</a>
+        <a href="#menu">Menu</a>
+        <a href="#categories">Catégories</a>
+        <a href="#a-propos">À propos</a>
+        <a href="#contact">Contact</a>
+      </nav>
+      <div class="header-actions">
+        <button class="icon-btn" id="search-toggle" type="button" aria-expanded="false" aria-controls="search-bar" aria-label="Rechercher un produit"><svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg></button>
+        <button class="icon-btn" type="button" data-open-cart aria-label="Ouvrir le panier"><svg class="icon" aria-hidden="true"><use href="#i-basket"></use></svg><span class="cart-badge" data-cart-count hidden>0</span></button>
+        <a class="btn btn--primary btn--sm" href="#menu">Commander</a>
+        <button class="icon-btn nav-toggle" type="button" aria-expanded="false" aria-controls="main-nav" aria-label="Ouvrir la navigation"><svg class="icon" aria-hidden="true"><use href="#i-menu"></use></svg></button>
+      </div>
+    </div>
+    <div class="search-bar" id="search-bar" hidden>
+      <div class="container">
+        <form id="search-form" role="search" aria-label="Rechercher dans le menu">
+          <input type="search" id="search-input" placeholder="Rechercher un plat, un gâteau, une douceur…" aria-label="Rechercher un produit">
+        </form>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- 3. Hero -->
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero__media">
+        <!-- La vidéo est décorative : l'image d'attente (poster) s'affiche
+             instantanément, et la vidéo ne se charge que si la connexion
+             le permet (voir initHeroVideo dans js/home.js). -->
+        <video class="hero__video" id="hero-video"
+               poster="assets/video/hero-poster.jpg"
+               width="1280" height="720"
+               muted loop playsinline disablepictureinpicture
+               preload="none" aria-hidden="true" tabindex="-1"></video>
+      </div>
+      <div class="container hero__content">
+        <span class="hero__eyebrow">Cuisine artisanale comorienne</span>
+        <h1 class="hero__title" id="hero-title">Des saveurs préparées avec amour</h1>
+        <p class="hero__subtitle" id="hero-subtitle">Découvrez des plats, douceurs et créations maison préparés avec soin pour vos repas, vos envies et vos moments de partage.</p>
+        <div class="hero__ctas">
+          <a class="btn btn--primary" id="hero-cta-primary" href="#menu">Commander maintenant</a>
+          <a class="btn btn--secondary" id="hero-cta-secondary" href="#menu">Découvrir le menu</a>
+        </div>
+        <p class="hero__reassurance" id="hero-reassurance">Cuisine maison • Commande simple • Livraison disponible</p>
+      </div>
+    </section>
+
+    <!-- 4. Catégories + 5. Produits -->
+    <section class="section" id="categories" aria-labelledby="menu-title">
+      <div class="container">
+        <span id="menu" aria-hidden="true"></span>
+        <div class="section__head">
+          <p class="section__eyebrow">Le menu</p>
+          <h2 id="menu-title">Qu'est-ce qui vous ferait plaisir ?</h2>
+          <p>Filtrez par envie, cliquez sur un produit pour le découvrir en détail, puis ajoutez-le à votre panier.</p>
+        </div>
+        <div class="cat-pills" id="cat-pills" role="group" aria-label="Filtrer par catégorie"></div>
+        <div class="product-grid" id="product-grid" style="margin-top:1.4rem" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 6. Signature -->
+    <section class="section section--soft" id="a-propos" aria-labelledby="about-title">
+      <div class="container about-grid">
+        <div class="about-grid__img reveal">
+          <img src="assets/img/lifestyle/gateaux-coeur-900.jpg" alt="La cuisinière ZAIDAT FOOD présente fièrement l'un de ses gâteaux cœur décorés à la crème" loading="lazy" width="900" height="900" data-fallback>
+        </div>
+        <div>
+          <p class="section__eyebrow">La maison</p>
+          <h2 id="about-title">La cuisine de Zaidat</h2>
+          <p id="about-text" style="color:var(--ink-soft)">Derrière ZAIDAT FOOD, il y a une cuisinière passionnée qui prépare chaque plat comme à la maison.</p>
+          <ul class="about-points" id="about-points"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Comment commander -->
+    <section class="section" id="comment-commander" aria-labelledby="steps-title">
+      <div class="container">
+        <div class="section__head">
+          <p class="section__eyebrow">C'est simple</p>
+          <h2 id="steps-title">Comment commander ?</h2>
+        </div>
+        <div class="steps">
+          <div class="step reveal"><h3>Choisissez vos produits</h3><p>Parcourez le menu et laissez-vous tenter par nos plats et douceurs maison.</p></div>
+          <div class="step reveal"><h3>Ajoutez-les au panier</h3><p>Sélectionnez la quantité et vos éventuelles personnalisations.</p></div>
+          <div class="step reveal"><h3>Indiquez vos informations</h3><p>Nom, téléphone, zone et mode de récupération : cela prend une minute.</p></div>
+          <div class="step reveal"><h3>Confirmez votre commande</h3><p>Votre commande part sur WhatsApp, ZAIDAT FOOD vous confirme rapidement.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Promesses -->
+    <section class="section section--ink" aria-labelledby="promises-title">
+      <div class="container">
+        <div class="section__head">
+          <p class="section__eyebrow">Nos engagements</p>
+          <h2 id="promises-title" style="color:#fff">Ce que ZAIDAT FOOD vous promet</h2>
+        </div>
+        <div class="promises">
+          <div class="promise reveal"><svg class="icon icon--xl" aria-hidden="true"><use href="#i-heart"></use></svg><strong>Préparé avec soin</strong><span>Chaque commande est cuisinée avec attention</span></div>
+          <div class="promise reveal"><svg class="icon icon--xl" aria-hidden="true"><use href="#i-leaf"></use></svg><strong>Produits frais</strong><span>Des ingrédients choisis et travaillés maison</span></div>
+          <div class="promise reveal"><svg class="icon icon--xl" aria-hidden="true"><use href="#i-bag"></use></svg><strong>Commande simple</strong><span>Un panier, un message WhatsApp, c'est parti</span></div>
+          <div class="promise reveal"><svg class="icon icon--xl" aria-hidden="true"><use href="#i-scooter"></use></svg><strong>Livraison selon disponibilité</strong><span>Ou retrait directement auprès de la cuisinière</span></div>
+          <div class="promise reveal"><svg class="icon icon--xl" aria-hidden="true"><use href="#i-users"></use></svg><strong>Service humain</strong><span>Une vraie personne vous répond et vous conseille</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. Occasions -->
+    <section class="section" aria-labelledby="occasion-title">
+      <div class="container">
+        <div class="occasion reveal">
+          <div class="occasion__img">
+            <img src="assets/img/products/gateau-grand-format-900.jpg" alt="Grand gâteau rose décoré de papillons pour les grandes occasions" loading="lazy" width="900" height="900" data-fallback>
+          </div>
+          <div class="occasion__body">
+            <p class="section__eyebrow">Événements</p>
+            <h2 id="occasion-title">Une occasion à fêter ?</h2>
+            <p>Anniversaires, repas familiaux, événements : ZAIDAT FOOD prépare aussi vos gâteaux sur commande et vos plateaux gourmands.</p>
+            <ul class="occasion__tags">
+              <li><svg class="icon icon--sm" aria-hidden="true"><use href="#i-cake"></use></svg> Anniversaires</li>
+              <li><svg class="icon icon--sm" aria-hidden="true"><use href="#i-users"></use></svg> Repas familiaux</li>
+              <li><svg class="icon icon--sm" aria-hidden="true"><use href="#i-sparkle"></use></svg> Événements</li>
+              <li><svg class="icon icon--sm" aria-hidden="true"><use href="#i-tray"></use></svg> Plateaux</li>
+              <li><svg class="icon icon--sm" aria-hidden="true"><use href="#i-chef-hat"></use></svg> Gâteaux sur commande</li>
+            </ul>
+            <div><a class="btn btn--primary" href="produit.html?p=gateau-grand-format">Commander un gâteau</a></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10. Témoignages (masqué tant qu'aucun vrai témoignage n'est configuré) -->
+    <section class="section section--soft" id="testimonials-section" aria-labelledby="testimonials-title" hidden>
+      <div class="container">
+        <div class="section__head">
+          <p class="section__eyebrow">Ils ont goûté</p>
+          <h2 id="testimonials-title">Vos mots doux</h2>
+        </div>
+        <div class="testimonials" id="testimonials-grid"></div>
+      </div>
+    </section>
+
+    <!-- 11. Galerie -->
+    <section class="section" id="galerie" aria-labelledby="gallery-title">
+      <div class="container">
+        <div class="section__head">
+          <p class="section__eyebrow">En images</p>
+          <h2 id="gallery-title">L'esprit ZAIDAT FOOD</h2>
+          <p>Des produits faits maison, des moments à partager — cliquez pour découvrir chaque création.</p>
+        </div>
+        <div class="gallery" id="gallery-grid"></div>
+      </div>
+    </section>
+
+    <!-- 12. CTA final -->
+    <section class="section section--soft cta-final" aria-labelledby="cta-title">
+      <div class="container">
+        <h2 id="cta-title">Une envie particulière ?</h2>
+        <p style="color:var(--ink-soft)">Préparons votre commande ensemble — dites-nous ce qui vous ferait plaisir.</p>
+        <a class="btn btn--primary" href="#menu">Composer ma commande</a>
+      </div>
+    </section>
+  </main>
+
+  <!-- 13. Footer -->
+  <footer class="site-footer" id="contact">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <a class="brand" href="index.html">
+            <img src="assets/img/logo-256.png" alt="" width="46" height="46">
+            <span><strong>ZAIDAT FOOD</strong><small>Cuisine artisanale</small></span>
+          </a>
+          <p style="font-size:0.9rem;color:rgba(250,243,232,0.75);margin-top:0.8rem">Des plats, gâteaux et douceurs faits maison, préparés avec amour et inspirés des saveurs des Comores.</p>
+        </div>
+        <div>
+          <h3>Catégories</h3>
+          <ul id="footer-categories"></ul>
+        </div>
+        <div>
+          <h3>Liens utiles</h3>
+          <ul>
+            <li><a href="index.html">Accueil</a></li>
+            <li><a href="index.html#menu">Le menu</a></li>
+            <li><a href="commande.html">Ma commande</a></li>
+            <li><a href="mentions-legales.html">Mentions légales</a></li>
+            <li><a href="confidentialite.html">Confidentialité</a></li>
+          </ul>
+        </div>
+        <div>
+          <h3>Contact &amp; horaires</h3>
+          <ul id="footer-contact">
+            <li>Commande en ligne via le panier du site</li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-note">
+        <span>© <span id="footer-year">2026</span> ZAIDAT FOOD — Tous droits réservés.</span>
+        <span>Fait avec <svg class="icon icon--sm" aria-hidden="true"><use href="#i-heart"></use></svg> et beaucoup de gourmandise.</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/icons.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/products.js"></script>
+  <script src="js/cart.js"></script>
+  <script src="js/whatsapp.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/home.js"></script>
+</body>
+</html>
