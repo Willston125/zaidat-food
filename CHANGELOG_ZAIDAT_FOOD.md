@@ -1,5 +1,78 @@
 # CHANGELOG — ZAIDAT FOOD
 
+## 2026-07-25 — v9 : menu mobile réparé + dashboard de gestion
+
+### Le menu mobile était tronqué
+
+Signalement : *« quand on clique dessus, elle apparaît sous forme invisible,
+les textes ne se voient pas bien. »*
+
+**Cause trouvée et mesurée** : `backdrop-filter` sur `.site-header` en faisait
+la référence de positionnement de ses enfants `position: fixed`. Le panneau du
+menu se calait donc sur la hauteur du header — **112 px au lieu de 844 px**.
+Ses liens débordaient hors du panneau et s'affichaient **sans fond, par-dessus
+la page** : d'où l'impression de texte invisible.
+
+Corrections :
+
+- le flou passe sur `.site-header::before` : le header cesse d'être une
+  référence de positionnement, le panneau occupe toute la hauteur ;
+- header en `z-index: 150` quand le menu est ouvert, pour passer au-dessus de
+  la barre mobile et du bouton flottant ;
+- **voile sombre** derrière le menu, qui le fait ressortir et le ferme au toucher ;
+- en-tête avec bouton de fermeture, **icône devant chaque lien** ;
+- boutons **Commander** et **WhatsApp** en pied de menu ;
+- liens de **59 px de haut**, contraste **12,9:1** ;
+- fermeture par le voile, la touche Échap, le bouton, ou un clic sur un lien ;
+- défilement de la page bloqué pendant l'ouverture.
+
+Vérifié à 390 px et 1280 px : bureau inchangé, aucun débordement.
+
+### Dashboard de gestion (nouveau)
+
+Un espace complet à l'adresse `/admin/` permet de gérer le site sans toucher
+au code. Choix retenu avec le client : **publication directe sur GitHub**, avec
+redéploiement automatique par Vercel.
+
+**Ce qu'on peut modifier** — produits (nom, adresse, catégorie, prix,
+descriptions, délai, portions, disponibilité, mise en avant, badge populaire,
+options de commande), catégories, textes du site, contact et livraison,
+témoignages.
+
+**Photos** — import, **recadrage carré** avec déplacement et zoom, export
+automatique en deux tailles (900 px pour la fiche, 450 px pour la carte),
+compression JPEG. Tout se passe dans le navigateur : aucune photo n'est
+envoyée avant la publication.
+
+**Sécurité des données** — la publication est refusée si une erreur est
+détectée : adresse de fiche en double, catégorie inexistante, prix négatif,
+photo manquante, numéro WhatsApp mal formé. Surtout, **les fichiers générés
+sont exécutés à blanc avant l'envoi** : un fichier invalide rendrait tout le
+site blanc, ce contrôle l'empêche.
+
+**Publication atomique** — données et photos partent dans **un seul
+enregistrement** (Git Data API : blobs → arbre → commit → référence). Le site
+n'est jamais dans un état incohérent.
+
+**Architecture** — `admin/js/github.js` (liaison GitHub), `cropper.js`
+(recadrage), `serialize.js` (génération et contrôles), `admin.js`
+(application). Les fichiers générés conservent les fonctions utilitaires du
+site ; les données sont écrites en JSON, ce qui élimine tout risque
+d'échappement incorrect.
+
+**Tests** — aller-retour complet lecture → génération → relecture, y compris
+guillemets, esperluettes, chevrons, accents et retours à la ligne : contenu
+identique, et les six fonctions utilitaires du site fonctionnent après
+régénération. Les 9 garde-fous ont été déclenchés un par un. Recadrage
+vérifié sur une source 1600×900 : sorties bien carrées en 900 et 450.
+Dashboard testé à 390 px et 1280 px. Site public revérifié après coup :
+aucune régression.
+
+`/admin/` est exclu de l'indexation (`robots.txt` + `noindex`).
+Guide de prise en main : `admin/GUIDE_DASHBOARD.md`.
+
+---
+
 ## 2026-07-25 — v8 : audit complet, images déformées et cadrage vidéo
 
 Demande : *« audit complet sur toutes les pages, la responsive aussi, les
