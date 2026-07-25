@@ -15,11 +15,29 @@
     return params.get("p") || "";
   }
 
-  function notFound(root) {
+  /* Aucun produit à afficher : plutôt qu'un cul-de-sac, on propose
+     directement le menu complet pour que le visiteur puisse repartir
+     en un clic (cas d'un lien incomplet ou d'un produit retiré). */
+  function notFound(root, slugDemande) {
+    var titre = slugDemande
+      ? "<strong>Ce produit est introuvable.</strong><br>Il a peut-être été retiré du menu."
+      : "<strong>Choisissez un produit</strong><br>Voici tout ce que prépare ZAIDAT FOOD en ce moment.";
+
     root.innerHTML =
-      '<div class="grid-empty" style="margin:3rem 0">' +
-      "<p><strong>Ce produit est introuvable.</strong><br>Il a peut-être été retiré du menu.</p>" +
-      '<a class="btn btn--primary" href="index.html#menu">Retour au menu</a></div>';
+      '<div class="grid-empty" style="margin:2rem 0 1.5rem">' +
+      "<p>" + titre + "</p>" +
+      '<a class="btn btn--primary" href="index.html#menu">Voir tout le menu</a></div>' +
+      '<div class="product-grid" id="fallback-grid" style="margin-bottom:2rem"></div>';
+
+    var grid = document.getElementById("fallback-grid");
+    grid.innerHTML = PRODUCTS.filter(function (p) { return p.available; })
+      .slice(0, 8)
+      .map(function (p) { return ZF.cardHtml(p, { compact: true, reveal: false }); })
+      .join("");
+    ZF.bindImageFallbacks(grid);
+
+    var section = $("#similar-section");
+    if (section) section.setAttribute("hidden", "");
   }
 
   function collectOptions(product) {
@@ -46,8 +64,9 @@
   function render() {
     var root = $("#product-root");
     if (!root) return;
-    var product = getProductBySlug(getSlug());
-    if (!product) { notFound(root); return; }
+    var slug = getSlug();
+    var product = getProductBySlug(slug);
+    if (!product) { notFound(root, slug); return; }
 
     var cat = getCategoryById(product.category);
     var price = formatPrice(product.price);
@@ -250,14 +269,25 @@
       t.addEventListener("click", function () { show(t.getAttribute("data-view")); });
     });
 
-    /* Un clic sur l'image elle-même bascule d'une vue à l'autre */
+    /* L'image elle-même bascule d'une vue à l'autre : accessible aussi
+       au clavier, et annoncée comme un bouton aux lecteurs d'écran. */
     var stage = $(".product-gallery__stage");
     if (stage) {
-      stage.addEventListener("click", function () {
+      function toggleView() {
         var current = ZF.$all('.gallery-thumb[aria-pressed="true"]')[0];
         show(current && current.getAttribute("data-view") === "life" ? "product" : "life");
-      });
+      }
+      stage.setAttribute("role", "button");
+      stage.setAttribute("tabindex", "0");
+      stage.setAttribute("aria-label", "Changer de vue : produit seul ou en situation");
       stage.style.cursor = "pointer";
+      stage.addEventListener("click", toggleView);
+      stage.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          toggleView();
+        }
+      });
     }
   }
 

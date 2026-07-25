@@ -2,6 +2,12 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "cleanUrls": false,
   "trailingSlash": false,
+  "rewrites": [
+    { "source": "/produit", "destination": "/produit.html" },
+    { "source": "/commande", "destination": "/commande.html" },
+    { "source": "/mentions-legales", "destination": "/mentions-legales.html" },
+    { "source": "/confidentialite", "destination": "/confidentialite.html" }
+  ],
   "headers": [
     {
       "source": "/assets/(.*)",

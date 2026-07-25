@@ -89,6 +89,12 @@
 
   /* Clic sur une carte : la scène de vie se révèle, puis la fiche s'ouvre */
   function initCardReveal() {
+    /* Retour arrière depuis une fiche : on remet les cartes à l'état normal
+       (sans cela, la carte cliquée resterait figée sur la scène de vie). */
+    window.addEventListener("pageshow", function () {
+      $all(".card.is-revealing").forEach(function (c) { c.classList.remove("is-revealing"); });
+    });
+
     document.addEventListener("click", function (e) {
       if (e.defaultPrevented) return;
       /* On respecte les clics « ouvrir dans un nouvel onglet » */
@@ -101,8 +107,11 @@
 
       e.preventDefault();
       card.classList.add("is-revealing");
+
+      /* Délai volontairement court : au-delà, le clic est ressenti
+         comme « mort ». 160 ms suffisent à percevoir la bascule. */
       var href = link.getAttribute("href");
-      setTimeout(function () { window.location.href = href; }, 420);
+      setTimeout(function () { window.location.href = href; }, 160);
     });
   }
 

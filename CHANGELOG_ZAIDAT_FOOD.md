@@ -1,5 +1,67 @@
 # CHANGELOG — ZAIDAT FOOD
 
+## 2026-07-25 — v7 : audit des cartes, correction des « clics muets »
+
+Signalement : *« il y a des cartes qui ont des clics muets, ne mènent nulle part. »*
+
+### Méthode d'audit
+
+Plutôt que de relire le code, chaque carte a été sondée **point par point**
+avec `elementFromPoint`, qui indique ce que le navigateur place réellement
+sous le curseur : image, badges, coins, titre, description, prix, marges.
+**168 points testés** sur les 14 cartes, dans **chacun des 6 filtres de
+catégorie** (les cartes sont regénérées à chaque filtre).
+
+Résultat : **aucun clic mort d'origine géométrique**. Tous les 85 éléments
+cliquables de l'accueil mènent quelque part.
+
+### La vraie cause : des redirections périmées en mémoire du navigateur
+
+Lors des tout premiers tests, le serveur local était configuré avec
+`cleanUrls`, qui redirige `produit.html?p=samoussas` vers `/produit` — **en
+supprimant le paramètre `?p=`**. Ces redirections sont de type 301, que les
+navigateurs mettent en cache **durablement**. J'avais corrigé le serveur
+ensuite, mais les redirections déjà enregistrées continuaient de s'appliquer :
+le clic partait vers `/produit`, sans paramètre, et n'aboutissait nulle part.
+
+Vérifié en direct : la même URL renvoie **404 avec le cache**, **200 sans le
+cache**. C'est bien un vestige de cache, pas un défaut du site — mais il
+fallait rendre le site insensible à ce genre d'incident.
+
+### Corrections
+
+1. **Réécritures d'URL** (`vercel.json` et `serve.json`) : `/produit`,
+   `/commande`, `/mentions-legales` et `/confidentialite` servent désormais la
+   bonne page. Les deux formes d'adresse fonctionnent, avec ou sans `.html` ;
+2. **La page produit sans paramètre n'est plus un cul-de-sac** : au lieu d'un
+   message d'erreur seul, elle affiche « Choisissez un produit » **et propose
+   directement 8 produits cliquables**. Même en cas de lien incomplet, le
+   visiteur repart en un clic ;
+3. **Délai d'ouverture réduit de 420 ms à 160 ms.** L'animation de révélation
+   retardait chaque ouverture de fiche : sur téléphone, ce silence de presque
+   une demi-seconde se ressent exactement comme un « clic muet ». La bascule
+   reste visible, mais l'ouverture est désormais quasi immédiate — conforme à
+   la priorité donnée à la rapidité ;
+4. **Retour arrière assaini** : une carte cliquée puis quittée revenait figée
+   sur la scène de vie ; elle reprend maintenant son état normal ;
+5. **Grande image de la fiche produit accessible au clavier** : elle bascule
+   entre les deux vues, mais n'était activable qu'à la souris. Elle est
+   désormais annoncée comme un bouton et réagit à Entrée et Espace.
+
+### Vérifications finales
+
+168 points de clic + 6 filtres + 14 fiches produits testées sans cache
+(toutes en HTTP 200, produit trouvé, images présentes), navigation réelle
+d'une carte vérifiée de bout en bout (`/produit.html?p=mini-pizza`, bonne
+fiche affichée), cartes « produits similaires » et cartes de secours toutes
+cliquables, console propre.
+
+> **À faire de votre côté :** votre navigateur peut encore garder les anciennes
+> redirections. Un **Ctrl+Shift+R** (ou vider le cache) les efface. Sur le site
+> en ligne, le problème ne se posera pas : le cache y est vierge.
+
+---
+
 ## 2026-07-25 — v6 : hero en vidéo + mise en ligne
 
 ### Le hero passe en vidéo
