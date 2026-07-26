@@ -121,11 +121,18 @@
   function renderTestimonials() {
     var section = $("#testimonials-section");
     if (!section) return;
-    var list = SITE_CONFIG.testimonials || [];
+    /* Une ligne laissée vide dans le dashboard afficherait un bloc
+       « “” — » sur le site : on ne garde que les témoignages remplis. */
+    var list = (SITE_CONFIG.testimonials || []).filter(function (t) {
+      return t && String(t.text || "").trim();
+    });
     if (list.length === 0) { section.setAttribute("hidden", ""); return; }
     section.removeAttribute("hidden");
     $("#testimonials-grid").innerHTML = list.map(function (t) {
-      return '<blockquote class="testimonial reveal">“' + esc(t.text) + '”<footer>— ' + esc(t.name) + "</footer></blockquote>";
+      var nom = String(t.name || "").trim();
+      /* Sans nom, on n'affiche pas un tiret orphelin */
+      return '<blockquote class="testimonial reveal">“' + esc(t.text) + "”" +
+        (nom ? "<footer>— " + esc(nom) + "</footer>" : "") + "</blockquote>";
     }).join("");
   }
 

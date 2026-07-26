@@ -444,13 +444,19 @@
   /* ---------- Révélation au scroll ---------- */
   function initReveal() {
     var els = $all(".reveal");
-    if (els.length === 0) return;
     if (!("IntersectionObserver" in window) ||
         window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      /* Sans observateur : tout est visible d'emblée, y compris ce qui
+         sera ajouté plus tard (d'où la fonction exposée plus bas). */
       els.forEach(function (el) { el.classList.add("is-visible"); });
+      ZF.suivreReveal = function (racine) {
+        $all(".reveal", racine || document).forEach(function (el) { el.classList.add("is-visible"); });
+      };
       return;
     }
+    var observateurADeclenche = false;
     var io = new IntersectionObserver(function (entries) {
+      observateurADeclenche = true;
       /* Apparition en cascade : les éléments qui entrent ensemble à l'écran
          se révèlent l'un après l'autre. Le décalage reste court (60 ms) et
          plafonné, pour rester élégant sans jamais faire attendre. */
@@ -466,6 +472,44 @@
       });
     }, { threshold: 0.12 });
     els.forEach(function (el) { io.observe(el); });
+
+    /* Tout ce qui est rendu APRÈS le démarrage (produits, témoignages,
+       galerie… qui arrivent de la base) doit aussi être surveillé.
+       Sans cela, ces éléments gardent `opacity: 0` pour toujours :
+       présents dans la page, mais invisibles à l'écran. */
+    ZF.suivreReveal = function (racine) {
+      $all(".reveal", racine || document).forEach(function (el) {
+        if (!el.classList.contains("is-visible")) io.observe(el);
+      });
+    };
+
+    /* Dernier filet. L'animation d'apparition ne doit JAMAIS pouvoir
+       rendre du contenu définitivement invisible. Si l'observateur n'a
+       rien signalé au bout de 3 secondes, c'est qu'il ne fonctionne pas
+       dans ce navigateur : on affiche tout sans animation. */
+    setTimeout(function () {
+      if (observateurADeclenche) return;
+      $all(".reveal").forEach(function (el) { el.classList.add("is-visible"); });
+    }, 3000);
+
+    /* Filet automatique : aucun appelant n'a besoin d'y penser. */
+    if ("MutationObserver" in window) {
+      new MutationObserver(function (mutations) {
+        mutations.forEach(function (m) {
+          Array.prototype.forEach.call(m.addedNodes, function (n) {
+            if (n.nodeType !== 1) return;
+            if (n.classList && n.classList.contains("reveal") && !n.classList.contains("is-visible")) {
+              io.observe(n);
+            }
+            if (n.querySelectorAll) {
+              Array.prototype.forEach.call(n.querySelectorAll(".reveal:not(.is-visible)"), function (el) {
+                io.observe(el);
+              });
+            }
+          });
+        });
+      }).observe(document.body, { childList: true, subtree: true });
+    }
   }
 
   /* ---------- Barre d'info + pied de page (toutes pages) ---------- */
