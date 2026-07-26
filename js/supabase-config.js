@@ -26,7 +26,7 @@ const SUPABASE_CONFIG = {
   /* Clé publique « anon public » — Supabase → Project Settings → API.
      À coller ici en entier. Tant qu'elle est vide, le site affiche
      les produits de js/products.js et le dashboard reste en lecture. */
-  anonKey: "",
+  anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRoaGhkbHRoc3h2c2NhbnRjeWlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQwNzc0ODYsImV4cCI6MjA3OTY1MzQ4Nn0.-LtfMs24xhUCCtDuGLJOU-IKlo-u-FDeebY73r1-W3w",
 
   /* Nom du dossier de photos créé dans Supabase Storage */
   bucket: "photos",
