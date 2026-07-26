@@ -113,8 +113,13 @@ window.Serialize = (function () {
       }
       if (slugsVus[p.slug]) erreurs.push(ou + " : l'identifiant « " + p.slug + " » est déjà utilisé.");
       slugsVus[p.slug] = true;
-      if (idsVus[p.id]) erreurs.push(ou + " : l'identifiant interne « " + p.id + " » est déjà utilisé.");
-      idsVus[p.id] = true;
+      /* `id` est un identifiant interne facultatif (non utilisé pour
+         l'affichage du site, qui se base sur `slug`). Les produits
+         chargés depuis Supabase n'en ont pas tant qu'ils n'ont pas
+         été validés une fois dans le dashboard — plusieurs `id`
+         absents en même temps ne sont donc pas de vrais doublons. */
+      if (p.id && idsVus[p.id]) erreurs.push(ou + " : l'identifiant interne « " + p.id + " » est déjà utilisé.");
+      if (p.id) idsVus[p.id] = true;
 
       if (!p.category) erreurs.push(ou + " : aucune catégorie choisie.");
       else if (!categories.some(function (c) { return c.id === p.category; })) {

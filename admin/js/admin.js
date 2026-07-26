@@ -119,6 +119,12 @@
         D.config = d.config;
         D.source = d.source;
         D.baseVide = !!d.baseVide;
+        /* Pilote la bannière « Mode consultation » : elle ne doit
+           s'afficher que si les données viennent réellement des
+           fichiers du site, pas de la base. Cette variable n'était
+           jamais mise à jour et affichait la bannière à tort même
+           une fois connectée à Supabase. */
+        donneesDepuisBase = d.source === "supabase";
         original = instantane();
         imagesEnAttente = {};
         majEtat();
@@ -1029,6 +1035,11 @@
       .then(function () {
         original = instantane();
         imagesEnAttente = {};
+        /* Premier enregistrement d'une base qui était vide : les
+           données sont maintenant bien dans Supabase, la bannière
+           « Mode consultation » n'a plus lieu d'être. */
+        donneesDepuisBase = true;
+        D.baseVide = false;
         majEtat();
         journal.className = "message message--ok";
         journal.innerHTML =
