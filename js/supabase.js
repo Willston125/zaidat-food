@@ -68,6 +68,34 @@ window.SB = (function () {
     return h;
   }
 
+  /* Date d'expiration inscrite dans le jeton lui-même (champ `exp`).
+     Renvoie 0 si elle est illisible : on considère alors le jeton
+     comme périmé, ce qui déclenche un renouvellement inoffensif. */
+  function expirationJeton() {
+    var s = lireSession();
+    if (!s || !s.access_token) return 0;
+    try {
+      var charge = s.access_token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+      while (charge.length % 4) charge += "=";
+      return (JSON.parse(atob(charge)).exp || 0) * 1000;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  /* Garantit un jeton encore valide AVANT d'envoyer quoi que ce soit.
+     Indispensable pour les photos : un envoi part en une seule fois,
+     et Supabase refuse un jeton périmé avec « exp claim check failed ».
+     Marge de 2 minutes, le temps que l'envoi aboutisse. */
+  function assurerJetonValide() {
+    if (!estConnecte()) return Promise.resolve();
+    if (Date.now() < expirationJeton() - 120000) return Promise.resolve();
+    return rafraichir().catch(function () {
+      ecrireSession(null);
+      throw new Error("Votre session a expiré. Reconnectez-vous, vos modifications sont conservées.");
+    });
+  }
+
   /* Un jeton expire au bout d'une heure : on le renouvelle en
      silence pour que la cuisinière ne soit pas déconnectée. */
   function rafraichir() {
@@ -85,10 +113,14 @@ window.SB = (function () {
   /* Appel générique : réessaie une fois après renouvellement du jeton */
   function appel(chemin, options, dejaReessaye) {
     var o = options || {};
-    return fetch(base() + chemin, {
-      method: o.method || "GET",
-      headers: entetes(o.headers),
-      body: o.body,
+    /* Jeton vérifié en amont : un enregistrement enchaîne des dizaines
+       d'appels, et l'heure d'expiration peut tomber au milieu. */
+    return assurerJetonValide().then(function () {
+      return fetch(base() + chemin, {
+        method: o.method || "GET",
+        headers: entetes(o.headers),
+        body: o.body,
+      });
     }).then(function (r) {
       if (r.status === 401 && estConnecte() && !dejaReessaye) {
         return rafraichir()
@@ -189,19 +221,37 @@ window.SB = (function () {
 
   /* `blob` vient du recadrage : une image déjà redimensionnée et
      compressée, pour ne pas envoyer 4 Mo depuis un téléphone. */
-  function televerserPhoto(blob, nomFichier) {
+  function televerserPhoto(blob, nomFichier, dejaReessaye) {
     var c = config();
     var chemin = c.bucket + "/" + nomFichier;
-    return fetch(base() + "/storage/v1/object/" + chemin, {
-      method: "POST",
-      headers: entetes({ "Content-Type": blob.type || "image/jpeg", "x-upsert": "true" }),
-      body: blob,
-    }).then(function (r) {
-      if (!r.ok) {
-        return r.text().then(function (t) { throw new Error("Envoi de la photo impossible : " + t); });
-      }
-      return urlPublique(nomFichier);
-    });
+
+    /* Le jeton est vérifié avant l'envoi, puis une seconde chance est
+       laissée si Supabase le refuse quand même (horloges décalées). */
+    return assurerJetonValide()
+      .then(function () {
+        return fetch(base() + "/storage/v1/object/" + chemin, {
+          method: "POST",
+          headers: entetes({ "Content-Type": blob.type || "image/jpeg", "x-upsert": "true" }),
+          body: blob,
+        });
+      })
+      .then(function (r) {
+        if (r.ok) return urlPublique(nomFichier);
+
+        return r.text().then(function (t) {
+          var perime = r.status === 401 || r.status === 403 ||
+            /exp.*claim|jwt expired|Unauthorized/i.test(t);
+          if (perime && estConnecte() && !dejaReessaye) {
+            return rafraichir()
+              .then(function () { return televerserPhoto(blob, nomFichier, true); })
+              .catch(function () {
+                ecrireSession(null);
+                throw new Error("Votre session a expiré. Reconnectez-vous, puis renvoyez la photo.");
+              });
+          }
+          throw new Error("Envoi de la photo impossible : " + t);
+        });
+      });
   }
 
   function urlPublique(nomFichier) {
@@ -209,10 +259,14 @@ window.SB = (function () {
   }
 
   function supprimerPhoto(nomFichier) {
-    return fetch(base() + "/storage/v1/object/" + config().bucket + "/" + nomFichier, {
-      method: "DELETE",
-      headers: entetes(),
-    }).catch(function () { /* sans gravité : la photo devient orpheline */ });
+    return assurerJetonValide()
+      .then(function () {
+        return fetch(base() + "/storage/v1/object/" + config().bucket + "/" + nomFichier, {
+          method: "DELETE",
+          headers: entetes(),
+        });
+      })
+      .catch(function () { /* sans gravité : la photo devient orpheline */ });
   }
 
   /* Vérifie que l'adresse et la clé fonctionnent vraiment */
