@@ -497,7 +497,9 @@
     });
   }
 
-  function ouvrirRecadrage(image, cle, slot) {
+  /* Recadrage + envoi, commun aux photos de produits et à la galerie.
+     `options` : { dossier, nom, surSucces(grande, petite, poidsKo) } */
+  function ouvrirRecadrageGenerique(image, options) {
     var modale = document.createElement("div");
     modale.className = "adm-modale";
     modale.innerHTML =
@@ -520,14 +522,12 @@
 
     var valider = $("[data-valider]", modale);
     valider.addEventListener("click", function () {
-      if (!brouillon.slug) { toast("Renseignez d'abord le nom du produit", true); fermer(); return; }
       if (!BACK.estConnecte()) {
         toast("Connectez-vous d'abord : la photo doit être envoyée à la base", true);
         return;
       }
 
       var sorties = crop.exporter();
-      var dossier = cle === "produit" ? "produits" : "lifestyle";
       var poids = sorties.reduce(function (t, s) { return t + Cropper.poidsKo(s.dataURL); }, 0);
 
       valider.disabled = true;
@@ -540,25 +540,15 @@
       var chaine = Promise.resolve();
       sorties.forEach(function (s) {
         chaine = chaine.then(function () {
-          return BACK.envoyerPhoto(s.dataURL, brouillon.slug, dossier, s.taille)
+          return BACK.envoyerPhoto(s.dataURL, options.nom, options.dossier, s.taille)
             .then(function (url) { urls[s.taille] = url; });
         });
       });
 
       chaine
         .then(function () {
-          var grande = urls[900] || urls[450];
-          var petite = urls[450] || urls[900];
-          if (cle === "produit") {
-            brouillon.productImage = grande;
-            brouillon.productThumb = petite;
-          } else {
-            brouillon.lifestyleImage = grande;
-            brouillon.lifestyleThumb = petite;
-          }
           fermer();
-          rafraichirSlot(slot, cle);
-          majEtat();
+          options.surSucces(urls[900] || urls[450], urls[450] || urls[900], poids);
           toast("Photo envoyée (" + poids + " Ko)");
         })
         .catch(function (err) {
@@ -566,6 +556,24 @@
           valider.textContent = "Réessayer";
           toast(err.message, true);
         });
+    });
+  }
+
+  function ouvrirRecadrage(image, cle, slot) {
+    ouvrirRecadrageGenerique(image, {
+      dossier: cle === "produit" ? "produits" : "lifestyle",
+      nom: brouillon.slug,
+      surSucces: function (grande, petite) {
+        if (cle === "produit") {
+          brouillon.productImage = grande;
+          brouillon.productThumb = petite;
+        } else {
+          brouillon.lifestyleImage = grande;
+          brouillon.lifestyleThumb = petite;
+        }
+        rafraichirSlot(slot, cle);
+        majEtat();
+      },
     });
   }
 
@@ -813,6 +821,110 @@
       });
       $("[data-suppr]", bloc).addEventListener("click", function () {
         D.config.testimonials.splice(i, 1); majEtat(); rendre();
+      });
+    });
+  }
+
+  /* =========================================================
+     VUE : GALERIE
+     Photos libres (ambiance, cuisine, événements…), indépendantes
+     des produits. Si la liste est vide, le site retombe sur les
+     photos en situation des produits : la section n'est jamais vide.
+     ========================================================= */
+  function vueGalerie() {
+    var g = D.config.galerie || [];
+    var lignes = g.map(function (x, i) {
+      return (
+        '<div class="bloc galerie-ligne" data-galerie="' + i + '">' +
+        '<img class="galerie-vignette" src="' + esc(x.urlPetite || x.url) + '" alt="">' +
+        '<div class="galerie-ligne__corps">' +
+        '<div class="champ"><label>Légende (facultative)</label>' +
+        '<input type="text" data-champ="legende" value="' + esc(x.legende || "") + '" ' +
+        'placeholder="Ex. « Préparation des samboussas »"></div>' +
+        '<p class="aide">Sert de description pour les personnes malvoyantes et les moteurs de recherche.</p>' +
+        "</div>" +
+        '<div class="galerie-ligne__actions">' +
+        '<button class="btn-mini" data-monter title="Monter">↑</button>' +
+        '<button class="btn-mini" data-descendre title="Descendre">↓</button>' +
+        '<button class="btn-mini btn-mini--danger" data-suppr>Retirer</button>' +
+        "</div></div>"
+      );
+    }).join("");
+
+    return (
+      '<div class="adm-vue__tete"><div><h1>Galerie</h1>' +
+      "<p>Les photos d'ambiance affichées en bas de la page d'accueil. " +
+      "Ajoutez ce que vous voulez : votre cuisine, un buffet, un événement…</p></div>" +
+      '<button class="btn btn--primary" id="ajouter-photo-galerie">+ Ajouter une photo</button></div>' +
+      '<input type="file" id="fichier-galerie" accept="image/*" hidden>' +
+      (g.length
+        ? lignes
+        : '<div class="vide">Aucune photo pour l\'instant.<br>' +
+          "En attendant, le site affiche automatiquement les photos en situation de vos produits.</div>")
+    );
+  }
+
+  function brancherGalerie() {
+    var input = $("#fichier-galerie");
+    var btn = $("#ajouter-photo-galerie");
+
+    if (btn && input) {
+      btn.addEventListener("click", function () {
+        if (!BACK.estConnecte()) {
+          toast("Connectez-vous d'abord : la photo doit être envoyée à la base", true);
+          return;
+        }
+        input.click();
+      });
+
+      input.addEventListener("change", function () {
+        var fichier = input.files && input.files[0];
+        input.value = "";
+        if (!fichier) return;
+        if (fichier.size > 25 * 1024 * 1024) { toast("Photo trop lourde (25 Mo maximum)", true); return; }
+
+        Cropper.chargerFichier(fichier)
+          .then(function (img) {
+            ouvrirRecadrageGenerique(img, {
+              dossier: "galerie",
+              nom: "photo",
+              surSucces: function (grande, petite) {
+                D.config.galerie = D.config.galerie || [];
+                D.config.galerie.push({ url: grande, urlPetite: petite, legende: "" });
+                majEtat();
+                rendre();
+              },
+            });
+          })
+          .catch(function (err) { toast(err.message, true); });
+      });
+    }
+
+    $all("[data-galerie]").forEach(function (bloc) {
+      var i = parseInt(bloc.getAttribute("data-galerie"), 10);
+      var liste = D.config.galerie;
+
+      $all("[data-champ]", bloc).forEach(function (champ) {
+        champ.addEventListener("input", function () {
+          liste[i][champ.getAttribute("data-champ")] = champ.value;
+          majEtat();
+        });
+      });
+
+      $("[data-monter]", bloc).addEventListener("click", function () {
+        if (i === 0) return;
+        liste.splice(i - 1, 0, liste.splice(i, 1)[0]);
+        majEtat(); rendre();
+      });
+      $("[data-descendre]", bloc).addEventListener("click", function () {
+        if (i >= liste.length - 1) return;
+        liste.splice(i + 1, 0, liste.splice(i, 1)[0]);
+        majEtat(); rendre();
+      });
+      $("[data-suppr]", bloc).addEventListener("click", function () {
+        if (!confirm("Retirer cette photo de la galerie ?")) return;
+        liste.splice(i, 1);
+        majEtat(); rendre();
       });
     });
   }
@@ -1071,6 +1183,7 @@
     else if (vueCourante === "categories") { vue.innerHTML = vueCategories(); brancherCategories(); }
     else if (vueCourante === "textes") { vue.innerHTML = vueTextes(); brancherChampsConfig(); }
     else if (vueCourante === "contact") { vue.innerHTML = vueContact(); brancherChampsConfig(); }
+    else if (vueCourante === "galerie") { vue.innerHTML = vueGalerie(); brancherGalerie(); }
     else if (vueCourante === "temoignages") { vue.innerHTML = vueTemoignages(); brancherTemoignages(); }
     else if (vueCourante === "connexion") { vue.innerHTML = vueConnexion(); brancherConnexion(); }
 

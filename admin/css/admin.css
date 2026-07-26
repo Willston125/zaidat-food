@@ -304,3 +304,22 @@ code {
   .adm-produit__vignette { width: 52px; height: 52px; }
   .adm-produit__actions { grid-column: 1 / -1; }
 }
+
+/* ---------- Galerie ---------- */
+.galerie-ligne {
+  display: grid; grid-template-columns: 90px 1fr auto;
+  gap: 1rem; align-items: center;
+}
+.galerie-vignette {
+  width: 90px; height: 90px; border-radius: 10px;
+  object-fit: cover; background: var(--coral-soft);
+}
+.galerie-ligne__corps .champ { margin: 0; }
+.galerie-ligne__corps .aide { margin: 0.35rem 0 0; }
+.galerie-ligne__actions { display: flex; flex-direction: column; gap: 0.35rem; }
+
+@media (max-width: 640px) {
+  .galerie-ligne { grid-template-columns: 70px 1fr; }
+  .galerie-vignette { width: 70px; height: 70px; }
+  .galerie-ligne__actions { grid-column: 1 / -1; flex-direction: row; justify-content: flex-end; }
+}

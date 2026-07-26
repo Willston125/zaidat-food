@@ -140,6 +140,28 @@
   function renderGallery() {
     var wrap = $("#gallery-grid");
     if (!wrap) return;
+
+    /* Priorité aux photos choisies dans le dashboard. Tant qu'il n'y en
+       a pas, on montre les scènes de vie des produits : la section reste
+       vivante dès le premier jour, sans rien avoir à configurer. */
+    var choisies = (SITE_CONFIG.galerie || []).filter(function (g) {
+      return g && String(g.url || "").trim();
+    });
+
+    if (choisies.length) {
+      wrap.innerHTML = choisies.map(function (g) {
+        var alt = String(g.legende || "").trim() || "Photo ZAIDAT FOOD";
+        return (
+          '<figure><img src="' + esc(g.urlPetite || g.url) + '" alt="' + esc(alt) +
+          '" loading="lazy" width="450" height="450" data-fallback>' +
+          (String(g.legende || "").trim() ? "<figcaption>" + esc(g.legende) + "</figcaption>" : "") +
+          "</figure>"
+        );
+      }).join("");
+      ZF.bindImageFallbacks(wrap);
+      return;
+    }
+
     var withLifestyle = PRODUCTS.filter(function (p) { return p.lifestyleImage; }).slice(0, 6);
     wrap.innerHTML = withLifestyle.map(function (p) {
       return (

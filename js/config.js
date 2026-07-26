@@ -79,6 +79,12 @@ const SITE_CONFIG = {
      La section reste masquée tant que la liste est vide.     */
   testimonials: [],
 
+  /* --- Galerie -------------------------------------------
+     Photos d'ambiance, gérées depuis le dashboard.
+     Tant que la liste est vide, le site affiche à la place les
+     photos en situation des produits.                        */
+  galerie: [],
+
   /* --- Réseaux sociaux (laisser vide si inexistants) ------- */
   socials: {
     instagram: "",

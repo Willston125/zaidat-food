@@ -570,9 +570,17 @@ a { color: var(--terracotta-deep); }
 /* ---------- Galerie ---------- */
 .gallery { display: grid; gap: 0.8rem; grid-template-columns: repeat(2, 1fr); }
 @media (min-width: 680px) { .gallery { grid-template-columns: repeat(3, 1fr); } }
-.gallery a { display: block; border-radius: var(--radius-sm); overflow: hidden; box-shadow: var(--shadow-sm); }
+.gallery a,
+.gallery figure { display: block; margin: 0; border-radius: var(--radius-sm); overflow: hidden; box-shadow: var(--shadow-sm); position: relative; }
 .gallery img { aspect-ratio: 1/1; object-fit: cover; width: 100%; transition: transform 0.3s ease; }
 .gallery a:hover img { transform: scale(1.04); }
+/* Légende posée sur la photo, lisible grâce au dégradé sombre */
+.gallery figcaption {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 1.4rem 0.7rem 0.55rem;
+  font-size: 0.8rem; font-weight: 700; color: #fff; line-height: 1.3;
+  background: linear-gradient(to top, rgba(30,18,12,0.75), rgba(30,18,12,0));
+}
 
 /* ---------- CTA final ---------- */
 .cta-final { text-align: center; }
