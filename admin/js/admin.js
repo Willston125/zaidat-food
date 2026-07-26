@@ -152,7 +152,7 @@
   function apercuImage(chemin) {
     if (!chemin) return null;
     if (/^(https?:|data:|blob:)/.test(chemin)) return chemin;
-    return "../" + chemin;
+    return "/" + chemin;
   }
 
   function brancherProduits() {
@@ -945,7 +945,7 @@
         journal.className = "message message--ok";
         journal.innerHTML =
           "<strong>Enregistré</strong>Le site est à jour. " +
-          'Ouvrez <a href="../index.html" target="_blank" rel="noopener">le site</a> pour vérifier.';
+          'Ouvrez <a href="/index.html" target="_blank" rel="noopener">le site</a> pour vérifier.';
         bouton.textContent = "Fermer";
         bouton.disabled = false;
         bouton.onclick = function () { $("#modale-publier").hidden = true; rendre(); };

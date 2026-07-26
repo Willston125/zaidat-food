@@ -74,8 +74,8 @@ window.BACK = (function () {
      base est encore vide, et de mode consultation sans Supabase. */
   function lireFichiersLocaux() {
     return Promise.all([
-      fetch("../js/products.js").then(function (r) { return r.text(); }),
-      fetch("../js/config.js").then(function (r) { return r.text(); }),
+      fetch("/js/products.js").then(function (r) { return r.text(); }),
+      fetch("/js/config.js").then(function (r) { return r.text(); }),
     ]).then(function (s) {
       var f = new Function(
         s[0] + "\n" + s[1] +
