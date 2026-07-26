@@ -4,6 +4,13 @@
    dense, lisible, utilisable aussi bien au bureau qu'en mobilité.
    ========================================================= */
 
+/* INDISPENSABLE : la règle `[hidden] { display: none }` du navigateur
+   a une priorité très faible. Toute règle qui fixe `display` (comme
+   `.adm-tiroir { display: flex }`) l'écrase, et l'élément reste
+   affiché alors qu'il porte l'attribut `hidden` — il couvre l'écran
+   et intercepte les clics. Cette ligne rétablit le comportement. */
+[hidden] { display: none !important; }
+
 :root {
   --cream: #FAF3E8;
   --cream-soft: #FFF9EF;

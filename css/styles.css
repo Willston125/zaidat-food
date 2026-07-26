@@ -29,6 +29,11 @@
 
 * { box-sizing: border-box; }
 
+/* Filet de sécurité : la règle `[hidden] { display: none }` du navigateur
+   est si faible que n'importe quelle règle fixant `display` l'annule, et
+   l'élément reste affiché tout en étant censé être masqué. */
+[hidden] { display: none !important; }
+
 html { scroll-behavior: smooth; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
