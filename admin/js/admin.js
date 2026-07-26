@@ -69,8 +69,29 @@
       ? "Aucune modification à enregistrer"
       : (connecte ? "Enregistrer sur le site" : "Connectez-vous pour enregistrer");
 
+    majBarreEnregistrer(modif);
+
     $("#nb-produits").textContent = D.produits.length;
     $("#pastille-connexion").hidden = connecte;
+  }
+
+  /* Barre fixe en bas d'écran dès qu'un enregistrement est en attente.
+     Le bouton de l'en-tête passait inaperçu, surtout sur téléphone :
+     des tarifs modifiés restaient « en attente » sans que personne ne
+     comprenne pourquoi le site ne changeait pas. */
+  function majBarreEnregistrer(modif) {
+    var barre = $("#barre-enregistrer");
+    if (!barre) {
+      barre = document.createElement("div");
+      barre.id = "barre-enregistrer";
+      barre.hidden = true;
+      barre.innerHTML =
+        "<span>Des modifications ne sont pas encore sur le site.</span>" +
+        '<button class="btn btn--primary" type="button">Enregistrer maintenant</button>';
+      document.body.appendChild(barre);
+      $("button", barre).addEventListener("click", ouvrirPublication);
+    }
+    barre.hidden = !modif;
   }
 
   /* Évite de perdre un travail en cours en fermant l'onglet */
@@ -224,6 +245,9 @@
      ========================================================= */
   var editionIndex = null;
   var brouillon = null;
+  /* Vrai dès qu'un champ de la fiche est modifié, remis à zéro à la
+     validation : permet de prévenir avant de perdre une saisie. */
+  var brouillonTouche = false;
 
   function produitVierge() {
     return {
@@ -241,6 +265,12 @@
     $("#tiroir-titre").textContent = index === null ? "Nouveau produit" : "Modifier : " + brouillon.name;
     $("#tiroir-corps").innerHTML = formulaireProduit(brouillon);
     brancherFormulaireProduit();
+    /* Toute saisie marque la fiche comme « en cours » (délégué :
+       couvre aussi les champs d'options ajoutés dynamiquement). */
+    brouillonTouche = false;
+    ["input", "change"].forEach(function (ev) {
+      $("#tiroir-corps").addEventListener(ev, function () { brouillonTouche = true; });
+    });
     $("#adm-tiroir").hidden = false;
     $("#adm-overlay").hidden = false;
     document.body.style.overflow = "hidden";
@@ -249,6 +279,15 @@
   }
 
   function fermerEditeur() {
+    /* Des saisies non validées ? On demande avant de les jeter.
+       Sans ce garde-fou, modifier un prix puis fermer la fiche
+       perdait le travail en silence — et le bouton Enregistrer
+       ne s'activait jamais, sans explication. */
+    if (brouillonTouche &&
+        !confirm("Cette fiche contient des modifications non validées.\nFermer sans les garder ?")) {
+      return;
+    }
+    brouillonTouche = false;
     $("#adm-tiroir").hidden = true;
     $("#adm-overlay").hidden = true;
     document.body.style.overflow = "";
@@ -557,6 +596,10 @@
 
     if (editionIndex === null) D.produits.push(brouillon);
     else D.produits[editionIndex] = brouillon;
+
+    /* La saisie est validée : la fermeture ne doit plus demander
+       de confirmation. */
+    brouillonTouche = false;
 
     majEtat();
     rendre();
@@ -1050,7 +1093,7 @@
     $("#tiroir-annuler").addEventListener("click", fermerEditeur);
     $("#adm-overlay").addEventListener("click", fermerEditeur);
     $("#tiroir-valider").addEventListener("click", function () {
-      if (validerProduit()) { fermerEditeur(); toast("Produit enregistré — pensez à publier"); }
+      if (validerProduit()) { fermerEditeur(); toast("Produit validé — cliquez sur « Enregistrer » pour mettre le site à jour"); }
     });
 
     $("#btn-publier").addEventListener("click", ouvrirPublication);
