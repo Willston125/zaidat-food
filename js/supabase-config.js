@@ -20,10 +20,12 @@
    ========================================================= */
 
 const SUPABASE_CONFIG = {
-  /* Exemple : "https://abcdefghijk.supabase.co" */
-  url: "",
+  /* Projet « Willston125's Project » de l'organisation CINETCOM */
+  url: "https://dhhhdlthsxvscantcyir.supabase.co",
 
-  /* Clé publique « anon public » */
+  /* Clé publique « anon public » — Supabase → Project Settings → API.
+     À coller ici en entier. Tant qu'elle est vide, le site affiche
+     les produits de js/products.js et le dashboard reste en lecture. */
   anonKey: "",
 
   /* Nom du dossier de photos créé dans Supabase Storage */
