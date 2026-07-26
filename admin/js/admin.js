@@ -432,6 +432,19 @@
       if (!fichier) return;
       if (fichier.size > 25 * 1024 * 1024) { toast("Photo trop lourde (25 Mo maximum)", true); return; }
 
+      /* On prévient AVANT le recadrage : découvrir qu'il faut se
+         connecter après avoir cadré sa photo est décourageant. */
+      if (!BACK.estConnecte()) {
+        toast("Connectez-vous d'abord : la photo doit être envoyée à la base", true);
+        input.value = "";
+        return;
+      }
+      if (!brouillon.slug) {
+        toast("Renseignez d'abord le nom du produit", true);
+        input.value = "";
+        return;
+      }
+
       Cropper.chargerFichier(fichier)
         .then(function (img) { ouvrirRecadrage(img, cle, slot); })
         .catch(function (err) { toast(err.message, true); });
