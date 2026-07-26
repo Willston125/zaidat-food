@@ -178,7 +178,7 @@ window.Cropper = (function () {
     return { exporter: exporter, redessiner: dimensionner };
   }
 
-  /* Retire l'en-tête "data:image/jpeg;base64," pour l'envoi à GitHub */
+  /* Retire l'en-tête "data:image/jpeg;base64," avant l'envoi */
   function base64Seul(dataURL) {
     return dataURL.substring(dataURL.indexOf(",") + 1);
   }

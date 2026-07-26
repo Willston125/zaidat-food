@@ -1,7 +1,7 @@
 /* =========================================================
    ZAIDAT FOOD — Sauvegarde du dashboard (Supabase)
    ---------------------------------------------------------
-   Remplace l'ancienne publication par GitHub. Ici, « Enregistrer »
+   Couche d'enregistrement du dashboard. Ici, « Enregistrer »
    écrit directement dans la base : le site est à jour dans la
    seconde, sans manipulation technique.
 

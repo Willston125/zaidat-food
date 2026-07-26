@@ -2,8 +2,8 @@
    ZAIDAT FOOD — Dashboard : application principale
    ---------------------------------------------------------
    Charge les données du site, permet de tout modifier, puis
-   republie les fichiers sur GitHub. Vercel remet le site à
-   jour automatiquement dans la minute qui suit.
+   les enregistre dans la base Supabase. Le site lit cette base
+   à chaque visite : les changements sont visibles aussitôt.
    ========================================================= */
 
 (function () {
@@ -25,7 +25,7 @@
   var original = "";
   var imagesEnAttente = {};   /* chemin -> dataURL */
   var vueCourante = "produits";
-  var chargeDepuisGitHub = false;
+  var donneesDepuisBase = false;
 
   /* ---------- Messages ---------- */
   var toastTimer = null;
@@ -975,10 +975,10 @@
     else if (vueCourante === "temoignages") { vue.innerHTML = vueTemoignages(); brancherTemoignages(); }
     else if (vueCourante === "connexion") { vue.innerHTML = vueConnexion(); brancherConnexion(); }
 
-    if (!chargeDepuisGitHub && vueCourante !== "connexion") {
+    if (!donneesDepuisBase && vueCourante !== "connexion") {
       vue.insertAdjacentHTML("afterbegin",
         '<div class="message message--alerte"><strong>Mode consultation</strong>' +
-        "Les données affichées viennent des fichiers locaux. Connectez-vous à GitHub pour pouvoir publier.</div>");
+        "Les données affichées viennent des fichiers du site. Connectez-vous pour pouvoir enregistrer vos modifications.</div>");
     }
     majEtat();
   }
