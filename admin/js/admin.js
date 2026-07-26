@@ -47,17 +47,30 @@
   }
   function majEtat() {
     var modif = aDesModifs();
+    var connecte = BACK.estConnecte();
     var el = $("#etat-modifs");
-    if (modif) {
+    if (!connecte && modif) {
+      el.textContent = "Non enregistré — connectez-vous";
+      el.classList.add("a-publier");
+    } else if (modif) {
       el.textContent = "Modifications non enregistrées";
       el.classList.add("a-publier");
     } else {
       el.textContent = "Tout est enregistré";
       el.classList.remove("a-publier");
     }
-    $("#btn-publier").disabled = !modif || !BACK.estConnecte();
+
+    /* Le bouton reste cliquable même déconnectée : un bouton grisé sans
+       explication laisse croire que le site est cassé. Le clic explique
+       alors ce qui manque et emmène au bon endroit. */
+    var btn = $("#btn-publier");
+    btn.disabled = !modif;
+    btn.title = !modif
+      ? "Aucune modification à enregistrer"
+      : (connecte ? "Enregistrer sur le site" : "Connectez-vous pour enregistrer");
+
     $("#nb-produits").textContent = D.produits.length;
-    $("#pastille-connexion").hidden = BACK.estConnecte();
+    $("#pastille-connexion").hidden = connecte;
   }
 
   /* Évite de perdre un travail en cours en fermant l'onglet */
@@ -873,6 +886,15 @@
         resultat.innerHTML = '<div class="message message--info">Connexion…</div>';
         BACK.connexion(email, mdp)
           .then(function () {
+            /* Recharger écraserait le travail en cours : on ne le fait
+               que si rien n'a été modifié. Sinon on garde les
+               modifications, prêtes à être enregistrées. */
+            if (aDesModifs()) {
+              toast("Connectée — vos modifications sont intactes, cliquez sur Enregistrer");
+              majEtat();
+              rendre();
+              return;
+            }
             toast("Connexion réussie");
             majEtat();
             return charger();
@@ -900,6 +922,16 @@
      PUBLICATION
      ========================================================= */
   function ouvrirPublication() {
+    /* Déconnectée : on ne reste pas muet, on explique et on emmène
+       à l'écran de connexion plutôt que de laisser croire à une panne. */
+    if (!BACK.estConnecte()) {
+      allerA("connexion");
+      toast("Connectez-vous d'abord : vos modifications sont conservées.", true);
+      var champ = $("#sb-email");
+      if (champ) champ.focus();
+      return;
+    }
+
     var controle = Serialize.verifier(D.categories, D.produits, D.config);
 
     var html = "";
@@ -983,14 +1015,21 @@
     majEtat();
   }
 
+  /* Bascule vers un écran donné, aussi bien depuis le menu que
+     depuis le code (par exemple pour emmener à la connexion). */
+  function allerA(vue) {
+    vueCourante = vue;
+    $all(".adm-nav__item").forEach(function (b) {
+      b.classList.toggle("is-active", b.getAttribute("data-vue") === vue);
+    });
+    rendre();
+    window.scrollTo(0, 0);
+  }
+
   function initNavigation() {
     $all(".adm-nav__item").forEach(function (btn) {
       btn.addEventListener("click", function () {
-        $all(".adm-nav__item").forEach(function (b) { b.classList.remove("is-active"); });
-        btn.classList.add("is-active");
-        vueCourante = btn.getAttribute("data-vue");
-        rendre();
-        window.scrollTo(0, 0);
+        allerA(btn.getAttribute("data-vue"));
       });
     });
 
