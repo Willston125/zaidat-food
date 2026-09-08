@@ -187,23 +187,30 @@
   }
 
   /* ---------- Champs du formulaire facultatif ---------- */
-  function initForm() {
-    var modeSel = $("#f-mode");
-    SITE_CONFIG.delivery.modes.forEach(function (m) {
-      var opt = document.createElement("option");
-      opt.value = m; opt.textContent = m;
-      modeSel.appendChild(opt);
-    });
 
-    var paySel = $("#f-paiement");
-    var blank = document.createElement("option");
-    blank.value = ""; blank.textContent = "Non précisé";
-    paySel.appendChild(blank);
-    SITE_CONFIG.paymentMethods.forEach(function (m) {
+  /* Remplit une liste déroulante en conservant le choix déjà fait :
+     les modes de récupération et de paiement peuvent être modifiés
+     depuis le dashboard pendant que la page est ouverte. */
+  function remplirListe(select, valeurs, libelleVide) {
+    if (!select) return;
+    var choix = select.value;
+    select.innerHTML = "";
+    var vide = document.createElement("option");
+    vide.value = ""; vide.textContent = libelleVide;
+    select.appendChild(vide);
+    (valeurs || []).forEach(function (v) {
       var opt = document.createElement("option");
-      opt.value = m; opt.textContent = m;
-      paySel.appendChild(opt);
+      opt.value = v; opt.textContent = v;
+      select.appendChild(opt);
     });
+    /* On ne restaure le choix que s'il existe toujours. */
+    var existe = Array.prototype.some.call(select.options, function (o) { return o.value === choix; });
+    select.value = existe ? choix : "";
+  }
+
+  function initForm() {
+    remplirListe($("#f-mode"), SITE_CONFIG.delivery.modes, "Choisir…");
+    remplirListe($("#f-paiement"), SITE_CONFIG.paymentMethods, "Non précisé");
 
     var dateInput = $("#f-date");
     if (dateInput) dateInput.min = new Date().toISOString().slice(0, 10);
@@ -243,5 +250,16 @@
     });
 
     Cart.onChange(refresh);
+
+    /* Données plus fraîches : les prix, le numéro de commande et les
+       listes déroulantes (modes de récupération, paiement) peuvent
+       avoir changé. Le message WhatsApp est reconstruit à partir des
+       nouvelles valeurs ; les informations déjà saisies sont
+       conservées, seules les listes sont reconstruites. */
+    ZF.surMajDonnees(function () {
+      remplirListe($("#f-mode"), SITE_CONFIG.delivery.modes, "Choisir…");
+      remplirListe($("#f-paiement"), SITE_CONFIG.paymentMethods, "Non précisé");
+      refresh();
+    });
   });
 })();

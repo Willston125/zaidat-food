@@ -29,8 +29,8 @@
   --bord: rgba(62, 42, 30, 0.14);
   --radius: 14px;
   --ombre: 0 6px 22px rgba(62, 42, 30, 0.12);
-  --font-display: "Fraunces", Georgia, serif;
-  --font-body: "Nunito Sans", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Fraunces", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+  --font-body: "Nunito Sans", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -258,6 +258,19 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0 0 0.5em; line-height: 1
 }
 #barre-enregistrer .btn { min-height: 42px; padding: 0.5rem 1.2rem; }
 
+/* La barre est fixée en bas : sans cette marge, elle recouvrait le
+   dernier produit de la liste — 98 px mesurés à 360 px de large,
+   boutons Modifier et Supprimer compris. La hauteur exacte est
+   mesurée par admin.js (la barre passe sur deux lignes en écran
+   étroit) et publiée dans --hauteur-barre. */
+body.a-barre-enregistrer .adm-vue {
+  padding-bottom: calc(1.6rem + var(--hauteur-barre, 0px));
+}
+/* Le message temporaire ne doit pas se glisser derrière la barre. */
+body.a-barre-enregistrer .adm-toast {
+  bottom: calc(24px + var(--hauteur-barre, 0px));
+}
+
 /* ---------- Messages ---------- */
 .message { border-radius: 12px; padding: 0.85rem 1rem; margin-bottom: 0.8rem; font-size: 0.9rem; }
 .message strong { display: block; margin-bottom: 0.2rem; }
@@ -294,7 +307,13 @@ code {
   .adm-nav {
     flex-direction: row; overflow-x: auto; border-right: none;
     border-bottom: 1px solid var(--bord); padding: 0.6rem;
-    position: sticky; top: 64px; z-index: 30;
+    /* `top: 64px` était écrit en dur alors que l'en-tête passe sur
+       deux ou trois lignes en écran étroit (144 à 162 px mesurés) :
+       la barre d'onglets se collait DERRIÈRE lui et disparaissait
+       complètement au défilement. La hauteur réelle est mesurée par
+       admin.js et publiée dans --hauteur-entete. */
+    position: sticky; top: var(--hauteur-entete, 64px); z-index: 30;
+    background: var(--cream-soft);
   }
   .adm-nav__item { white-space: nowrap; }
   .adm-vue { padding: 1rem; }

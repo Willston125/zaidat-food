@@ -1,15 +1,14 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" data-sans-donnees>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Politique de confidentialité — ZAIDAT FOOD</title>
   <meta name="description" content="Politique de confidentialité du site ZAIDAT FOOD.">
   <meta name="robots" content="noindex">
+  <link rel="canonical" href="/confidentialite.html">
   <link rel="icon" type="image/png" href="assets/img/favicon-64.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700;6..12,800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/fonts/polices.css">
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -17,7 +16,7 @@
   <header class="site-header">
     <div class="container site-header__inner">
       <a class="brand" href="index.html" aria-label="ZAIDAT FOOD — retour à l'accueil">
-        <img src="assets/img/logo-256.png" alt="" width="46" height="46">
+        <img src="assets/img/logo-96.png" alt="" width="46" height="46">
         <span><strong>ZAIDAT FOOD</strong><small>Cuisine artisanale</small></span>
       </a>
       <div class="header-actions">
@@ -28,14 +27,28 @@
   <main id="main">
     <div class="container legal-page">
       <h1>Politique de confidentialité</h1>
-      <h2>Données collectées</h2>
-      <p>Le site ZAIDAT FOOD ne collecte aucune donnée personnelle sur un serveur : il n'y a ni compte client, ni suivi publicitaire, ni cookie de traçage.</p>
+      <h2>En résumé</h2>
+      <p>ZAIDAT FOOD ne crée aucun compte client, ne pratique aucun suivi publicitaire et ne dépose aucun cookie de traçage. Aucune donnée que vous saisissez sur le site n'est enregistrée sur un serveur. Comme tout site accessible sur Internet, il repose en revanche sur des prestataires techniques qui voient passer votre adresse IP : ils sont listés ci-dessous.</p>
+
       <h2>Votre panier</h2>
-      <p>Le contenu de votre panier est enregistré uniquement dans votre navigateur (stockage local) afin de le retrouver lors de votre prochaine visite. Vous pouvez le vider à tout moment depuis le panier.</p>
+      <p>Le contenu de votre panier est enregistré uniquement dans votre navigateur (stockage local), afin de le retrouver lors de votre prochaine visite. Il ne quitte jamais votre appareil et vous pouvez le vider à tout moment depuis le panier. Le site conserve au même endroit une copie du menu, pour rester consultable même si la connexion est mauvaise.</p>
+
       <h2>Votre commande</h2>
-      <p>Les informations que vous saisissez lors de la commande (nom, téléphone, zone, remarques) servent uniquement à composer le message WhatsApp que vous envoyez vous-même à ZAIDAT FOOD. Elles ne sont ni stockées sur un serveur, ni transmises à des tiers par le site.</p>
-      <h2>WhatsApp</h2>
-      <p>L'envoi de la commande s'effectue via l'application WhatsApp, soumise à sa propre politique de confidentialité.</p>
+      <p>Les informations facultatives que vous saisissez (nom, téléphone, zone, date, remarques) servent uniquement à composer le message WhatsApp que vous envoyez vous-même à ZAIDAT FOOD. Elles ne sont ni enregistrées sur un serveur, ni transmises à des tiers par le site. Aucun paiement n'est encaissé en ligne.</p>
+
+      <h2>Prestataires techniques</h2>
+      <p>Trois services interviennent dans le fonctionnement du site. Chacun reçoit nécessairement votre adresse IP lorsque votre navigateur lui adresse une requête, comme pour n'importe quel site web.</p>
+      <ul>
+        <li><strong>Vercel</strong> — hébergement des pages du site. Enregistre des journaux techniques (adresse IP, page demandée, date) à des fins de sécurité et de mesure de charge.</li>
+        <li><strong>Supabase</strong> — base de données contenant le menu, les prix et les photos, consultée par votre navigateur à l'ouverture du site. Aucune information vous concernant n'y est envoyée : la communication est en lecture seule.</li>
+        <li><strong>WhatsApp (Meta)</strong> — l'envoi de la commande ouvre l'application WhatsApp, soumise à sa propre politique de confidentialité. La conversation qui s'ensuit se déroule entre vous et ZAIDAT FOOD.</li>
+      </ul>
+      <p>Le site n'utilise aucun autre service tiers. Les polices de caractères et les images sont servies depuis le site lui-même, sans passer par un fournisseur extérieur.</p>
+
+      <h2>Vos droits</h2>
+      <p>Puisque le site n'enregistre aucune donnée personnelle, il n'y a rien à consulter, corriger ou supprimer de ce côté. Pour les informations que vous auriez communiquées dans une conversation WhatsApp, adressez votre demande directement à ZAIDAT FOOD par ce même canal.</p>
+
+      <p><small>Dernière mise à jour : septembre 2026.</small></p>
       <p><a href="index.html">← Retour à l'accueil</a></p>
     </div>
   </main>
@@ -51,6 +64,7 @@
   <script src="js/supabase.js"></script>
   <script src="js/config.js"></script>
   <script src="js/products.js"></script>
+  <script src="js/valider.js"></script>
   <script src="js/store.js"></script>
   <script src="js/cart.js"></script>
   <script src="js/whatsapp.js"></script>

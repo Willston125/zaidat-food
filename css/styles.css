@@ -15,6 +15,10 @@
   --coral: #F3BBA4;
   --coral-soft: #FBE7DA;
   --gold: #B98A1D;
+  /* Doré assombri pour le texte sur fond doré : le doré clair ne
+     donnait que 3,13:1 avec du blanc, sous le minimum AA de 4,5:1.
+     Celui-ci atteint 4,87:1 en conservant la même teinte. */
+  --gold-deep: #936A0F;
   --green: #5F7F4F;
   --bordeaux: #7E2A33;
   --danger: #B3261E;
@@ -22,8 +26,8 @@
   --radius-sm: 12px;
   --shadow: 0 10px 30px rgba(62, 42, 30, 0.10);
   --shadow-sm: 0 4px 14px rgba(62, 42, 30, 0.08);
-  --font-display: "Fraunces", Georgia, serif;
-  --font-body: "Nunito Sans", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Fraunces", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+  --font-body: "Nunito Sans", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --header-h: 72px;
 }
 
@@ -217,10 +221,36 @@ a { color: var(--terracotta-deep); }
   display: flex; align-items: center; gap: 1rem;
   min-height: var(--header-h);
 }
-.brand { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; color: var(--ink); }
-.brand img { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; box-shadow: var(--shadow-sm); }
-.brand strong { font-family: var(--font-display); font-size: 1.12rem; letter-spacing: 0.02em; }
-.brand small { display: block; font-size: 0.68rem; color: var(--ink-soft); letter-spacing: 0.06em; text-transform: uppercase; }
+/* `flex-shrink: 0` n'est pas cosmétique : sans lui, le bloc du nom
+   était comprimé à 74 px par les boutons voisins alors qu'il en
+   demande environ 115, et « ZAIDAT FOOD » venait s'afficher SOUS le
+   bouton de recherche — on lisait « ZAIDAT FOOI » sur la plupart
+   des téléphones. */
+.brand {
+  display: flex; align-items: center; gap: 0.6rem;
+  text-decoration: none; color: var(--ink);
+  flex-shrink: 0; min-width: 0;
+}
+.brand img { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; box-shadow: var(--shadow-sm); flex-shrink: 0; }
+.brand strong { font-family: var(--font-display); font-size: 1.12rem; letter-spacing: 0.02em; white-space: nowrap; }
+.brand small { display: block; font-size: 0.68rem; color: var(--ink-soft); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
+
+/* Sur les écrans étroits, la place se prend sur ce qui est
+   redondant, jamais sur le nom de la marque : le sous-titre
+   « Cuisine artisanale » est déjà dans la barre d'information, et
+   le bouton « Commander » est doublé par la barre mobile fixe. */
+@media (max-width: 560px) {
+  .site-header__inner { gap: 0.55rem; }
+  .brand img { width: 40px; height: 40px; }
+  .brand strong { font-size: 1.02rem; }
+  .brand small { display: none; }
+  .header-actions .btn--sm { display: none; }
+}
+@media (max-width: 400px) {
+  .brand { gap: 0.45rem; }
+  .brand strong { font-size: 0.96rem; letter-spacing: 0; }
+  .header-actions { gap: 0.25rem; }
+}
 
 .main-nav { margin-left: auto; display: flex; align-items: center; gap: 0.3rem; }
 .main-nav a {
@@ -480,7 +510,7 @@ a { color: var(--terracotta-deep); }
   font-size: 0.72rem; font-weight: 800; letter-spacing: 0.04em;
   padding: 0.25rem 0.7rem; border-radius: 999px;
 }
-.card__badge--best { background: var(--gold); color: #fff; left: auto; right: 10px; }
+.card__badge--best { background: var(--gold-deep); color: #fff; left: auto; right: 10px; }
 .card__badge--off { background: var(--ink); color: var(--cream); }
 .card__body { padding: 0.9rem 1rem 1.1rem; display: flex; flex-direction: column; gap: 0.35rem; flex: 1; }
 .card__title { font-size: 1.02rem; margin: 0; }
@@ -490,9 +520,13 @@ a { color: var(--terracotta-deep); }
 .card__foot { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding-top: 0.5rem; }
 .card__price { font-weight: 800; color: var(--terracotta-deep); font-size: 0.98rem; }
 .card__price--tbc { font-size: 0.8rem; background: var(--coral-soft); padding: 0.25rem 0.65rem; border-radius: 999px; }
+/* Sans `flex-shrink: 0`, l'étiquette de prix voisine écrasait ce
+   bouton à 32 px de large — sous la cible tactile de 44 px, et
+   sous les 40 px annoncés par la documentation du projet. */
 .card__add {
   position: relative; z-index: 2;
-  width: 42px; height: 42px; border-radius: 50%;
+  width: 44px; height: 44px; min-width: 44px; flex-shrink: 0;
+  border-radius: 50%;
   background: var(--terracotta-deep); color: #fff; border: none;
   font-size: 1.25rem; font-weight: 700; cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center;
@@ -869,3 +903,26 @@ a { color: var(--terracotta-deep); }
 .legal-page { max-width: 760px; padding: 2.5rem 0 4rem; }
 .legal-page h1 { font-size: 2rem; }
 .legal-page h2 { font-size: 1.25rem; margin-top: 1.8em; }
+
+/* ---------- Cibles tactiles des liens (WCAG 2.2 — 2.5.8) ----------
+   Les liens de listes et de navigation faisaient 19 px de haut,
+   sous le minimum de 24 px. On agrandit la zone touchable sans
+   changer la taille du texte ni l'espacement visuel : le lien
+   reste identique à l'œil, mais atteignable au doigt.
+   Les liens au fil d'une phrase sont exclus par la spécification
+   et ne sont donc pas concernés. */
+.site-footer li a,
+.footer-note a,
+.breadcrumb a,
+.legal-page > p > a,
+.cart-secondary-link,
+.card__title a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+}
+.footer-note a { padding-block: 0.15rem; }
+.breadcrumb a { padding-block: 0.2rem; }
+
+/* Boutons textuels du panier : mêmes 24 px minimum */
+.cart-line__remove, .cart-clear { min-height: 24px; }

@@ -449,9 +449,6 @@
       /* Sans observateur : tout est visible d'emblée, y compris ce qui
          sera ajouté plus tard (d'où la fonction exposée plus bas). */
       els.forEach(function (el) { el.classList.add("is-visible"); });
-      ZF.suivreReveal = function (racine) {
-        $all(".reveal", racine || document).forEach(function (el) { el.classList.add("is-visible"); });
-      };
       return;
     }
     var observateurADeclenche = false;
@@ -476,12 +473,8 @@
     /* Tout ce qui est rendu APRÈS le démarrage (produits, témoignages,
        galerie… qui arrivent de la base) doit aussi être surveillé.
        Sans cela, ces éléments gardent `opacity: 0` pour toujours :
-       présents dans la page, mais invisibles à l'écran. */
-    ZF.suivreReveal = function (racine) {
-      $all(".reveal", racine || document).forEach(function (el) {
-        if (!el.classList.contains("is-visible")) io.observe(el);
-      });
-    };
+       présents dans la page, mais invisibles à l'écran. C'est le
+       MutationObserver installé plus bas qui s'en charge tout seul. */
 
     /* Dernier filet. L'animation d'apparition ne doit JAMAIS pouvoir
        rendre du contenu définitivement invisible. Si l'observateur n'a
@@ -580,6 +573,18 @@
     Cart.onChange(function () {
       updateBadges();
       renderDrawer();
+    });
+
+    /* Données plus fraîches : barre d'info, pied de page et panier
+       se remettent à jour. Le bouton WhatsApp flottant est refait
+       car le numéro de commande a pu changer. */
+    ZF.surMajDonnees(function () {
+      initChrome();
+      updateBadges();
+      renderDrawer();
+      var ancien = $(".wa-fab");
+      if (ancien) ancien.remove();
+      initWhatsAppFab();
     });
     /* Tous les déclencheurs d'ouverture du panier */
     document.addEventListener("click", function (e) {

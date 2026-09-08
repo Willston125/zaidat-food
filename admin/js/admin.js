@@ -23,9 +23,47 @@
   /* ---------- État ---------- */
   var D = { categories: [], produits: [], config: null };
   var original = "";
-  var imagesEnAttente = {};   /* chemin -> dataURL */
   var vueCourante = "produits";
   var donneesDepuisBase = false;
+
+  /* Mode consultation : les données sont affichées mais rien ne peut
+     être enregistré. Trois causes possibles, chacune avec son message :
+       • "non-configure"    : js/supabase-config.js n'est pas rempli ;
+       • "base-injoignable" : coupure réseau, ou projet Supabase en pause ;
+       • "non-autorise"     : compte connecté mais pas administrateur. */
+  var lectureSeule = false;
+  var motifLectureSeule = null;
+  var detailLectureSeule = "";
+  var dateCache = null;
+
+  /* Résultat du contrôle d'autorisation, mis à jour après connexion. */
+  var estAdministrateur = false;
+
+  function peutEnregistrer() {
+    return BACK.estConnecte() && estAdministrateur && !lectureSeule;
+  }
+
+  /* Recontrôle l'autorisation auprès de la base, puis rafraîchit l'écran. */
+  function verifierAutorisation() {
+    if (!BACK.estConnecte()) {
+      estAdministrateur = false;
+      return Promise.resolve(false);
+    }
+    return BACK.estAdministrateur().then(function (v) {
+      estAdministrateur = v;
+      if (!v && !lectureSeule) {
+        lectureSeule = true;
+        motifLectureSeule = "non-autorise";
+      } else if (v && motifLectureSeule === "non-autorise") {
+        lectureSeule = false;
+        motifLectureSeule = null;
+      }
+      return v;
+    }).catch(function () {
+      estAdministrateur = false;
+      return false;
+    });
+  }
 
   /* ---------- Messages ---------- */
   var toastTimer = null;
@@ -43,15 +81,36 @@
     return JSON.stringify({ c: D.categories, p: D.produits, g: D.config });
   }
   function aDesModifs() {
-    return instantane() !== original || Object.keys(imagesEnAttente).length > 0;
+    return instantane() !== original;
   }
+
+  /* Une seule phrase explique toujours pourquoi on ne peut pas
+     enregistrer. Un écran muet ou figé donne l'impression d'une panne. */
+  function raisonBlocage() {
+    if (motifLectureSeule === "non-configure") {
+      return "Base de données pas encore reliée — consultation seule";
+    }
+    if (motifLectureSeule === "base-injoignable") {
+      return "Base injoignable — consultation seule";
+    }
+    if (motifLectureSeule === "non-autorise") {
+      return "Compte non autorisé à modifier le site";
+    }
+    if (!BACK.estConnecte()) return "Connectez-vous pour enregistrer";
+    return null;
+  }
+
   function majEtat() {
     var modif = aDesModifs();
-    var connecte = BACK.estConnecte();
+    var blocage = raisonBlocage();
     var el = $("#etat-modifs");
-    if (!connecte && modif) {
-      el.textContent = "Non enregistré — connectez-vous";
+
+    if (blocage && modif) {
+      el.textContent = "Non enregistré — " + blocage.toLowerCase();
       el.classList.add("a-publier");
+    } else if (blocage) {
+      el.textContent = blocage;
+      el.classList.remove("a-publier");
     } else if (modif) {
       el.textContent = "Modifications non enregistrées";
       el.classList.add("a-publier");
@@ -60,19 +119,19 @@
       el.classList.remove("a-publier");
     }
 
-    /* Le bouton reste cliquable même déconnectée : un bouton grisé sans
+    /* Le bouton reste cliquable même bloquée : un bouton grisé sans
        explication laisse croire que le site est cassé. Le clic explique
        alors ce qui manque et emmène au bon endroit. */
     var btn = $("#btn-publier");
     btn.disabled = !modif;
     btn.title = !modif
       ? "Aucune modification à enregistrer"
-      : (connecte ? "Enregistrer sur le site" : "Connectez-vous pour enregistrer");
+      : (blocage || "Enregistrer sur le site");
 
     majBarreEnregistrer(modif);
 
     $("#nb-produits").textContent = D.produits.length;
-    $("#pastille-connexion").hidden = connecte;
+    $("#pastille-connexion").hidden = peutEnregistrer();
   }
 
   /* Barre fixe en bas d'écran dès qu'un enregistrement est en attente.
@@ -90,8 +149,39 @@
         '<button class="btn btn--primary" type="button">Enregistrer maintenant</button>';
       document.body.appendChild(barre);
       $("button", barre).addEventListener("click", ouvrirPublication);
+
+      /* La barre s'élargit sur deux lignes quand l'écran est étroit :
+         sa hauteur ne peut pas être devinée, il faut la mesurer. */
+      if (window.ResizeObserver) {
+        new ResizeObserver(reserverPlaceBarre).observe(barre);
+      } else {
+        window.addEventListener("resize", reserverPlaceBarre);
+      }
     }
     barre.hidden = !modif;
+    reserverPlaceBarre();
+  }
+
+  /* La barre est fixée en bas de l'écran : sans marge équivalente sous
+     le contenu, elle recouvrait le dernier produit de la liste — et
+     donc ses boutons Modifier et Supprimer, exactement au moment où
+     l'on travaille dessus. */
+  function reserverPlaceBarre() {
+    var barre = $("#barre-enregistrer");
+    var hauteur = barre && !barre.hidden ? barre.getBoundingClientRect().height : 0;
+    document.body.style.setProperty("--hauteur-barre", Math.ceil(hauteur) + "px");
+    document.body.classList.toggle("a-barre-enregistrer", hauteur > 0);
+  }
+
+  /* Même problème en haut : la barre d'onglets se colle sous l'en-tête,
+     dont la hauteur change selon la largeur de l'écran (il passe sur
+     deux ou trois lignes sur un téléphone). Une valeur écrite en dur
+     faisait disparaître les onglets derrière l'en-tête au défilement. */
+  function mesurerEnTete() {
+    var entete = $(".adm-header");
+    if (!entete) return;
+    var h = Math.ceil(entete.getBoundingClientRect().height);
+    document.documentElement.style.setProperty("--hauteur-entete", h + "px");
   }
 
   /* Évite de perdre un travail en cours en fermant l'onglet */
@@ -100,14 +190,6 @@
   });
 
   /* ---------- Chargement des données ---------- */
-  function extraireDonnees(sourceProduits, sourceConfig) {
-    var f = new Function(
-      sourceProduits + "\n" + sourceConfig +
-      "\nreturn { CATEGORIES: CATEGORIES, PRODUCTS: PRODUCTS, SITE_CONFIG: SITE_CONFIG };"
-    );
-    return f();
-  }
-
   function charger() {
     var vue = $("#adm-vue");
     vue.innerHTML = '<div class="adm-chargement">Chargement des données du site…</div>';
@@ -117,25 +199,74 @@
         D.categories = d.categories;
         D.produits = d.produits;
         D.config = d.config;
-        D.source = d.source;
         D.baseVide = !!d.baseVide;
-        /* Pilote la bannière « Mode consultation » : elle ne doit
-           s'afficher que si les données viennent réellement des
-           fichiers du site, pas de la base. Cette variable n'était
-           jamais mise à jour et affichait la bannière à tort même
-           une fois connectée à Supabase. */
+
+        lectureSeule = !!d.lectureSeule;
+        motifLectureSeule = d.motif || null;
+        detailLectureSeule = d.erreur || "";
+        dateCache = d.dateCache || null;
+
+        /* La bannière « Mode consultation » ne doit apparaître que si
+           les données ne viennent PAS de la base. */
         donneesDepuisBase = d.source === "supabase";
+
+        BACK.memoriserGalerie(d.config);
         original = instantane();
-        imagesEnAttente = {};
+
+        return verifierAutorisation();
+      })
+      .then(function () {
         majEtat();
         rendre();
       })
       .catch(function (err) {
+        /* Ne devrait plus arriver — BACK.charger() se rabat désormais
+           tout seul. On garde un message utile plutôt qu'un écran figé. */
+        lectureSeule = true;
+        motifLectureSeule = "base-injoignable";
+        detailLectureSeule = err && err.message;
         vue.innerHTML =
           '<div class="message message--erreur"><strong>Impossible de charger les données</strong>' +
-          esc(err.message) + "</div>" +
+          esc(err && err.message ? err.message : "Erreur inconnue") + "</div>" +
           '<p>Ouvrez l\'onglet <strong>Connexion</strong> pour vérifier les réglages.</p>';
+        majEtat();
       });
+  }
+
+  /* Bandeau affiché en tête de chaque écran quand l'enregistrement est
+     impossible. Il dit toujours trois choses : ce qui est affiché,
+     pourquoi c'est bloqué, et quoi faire. */
+  function banniereEtat() {
+    if (!lectureSeule && donneesDepuisBase) return "";
+
+    var titre, corps;
+    if (motifLectureSeule === "non-configure") {
+      titre = "Base de données pas encore reliée";
+      corps = "Vous voyez les produits inscrits dans les fichiers du site. " +
+        "Pour activer l'enregistrement, remplissez <code>js/supabase-config.js</code> — " +
+        "la marche à suivre est dans <code>admin/GUIDE_DASHBOARD.md</code>.";
+    } else if (motifLectureSeule === "base-injoignable") {
+      var quand = dateCache
+        ? " Ces données datent du " + new Date(dateCache).toLocaleString("fr-FR") + "."
+        : " Ce sont les produits inscrits dans les fichiers du site.";
+      titre = "Base injoignable — mode consultation";
+      corps = "Vos modifications ne peuvent pas être enregistrées pour l'instant." + quand +
+        " Le site public, lui, continue de fonctionner normalement. " +
+        "Le projet Supabase est peut-être en pause : réveillez-le, puis rechargez cette page." +
+        (detailLectureSeule ? "<br><small>Détail technique : " + esc(detailLectureSeule) + "</small>" : "");
+    } else if (motifLectureSeule === "non-autorise") {
+      titre = "Compte non autorisé";
+      corps = "Vous êtes bien connectée, mais ce compte n'a pas le droit de modifier le site. " +
+        "Il doit être déclaré administrateur dans Supabase : " +
+        "<code>select zf_admin.promouvoir_administrateur('votre@email');</code> " +
+        "dans le SQL Editor. Voir <code>admin/GUIDE_DASHBOARD.md</code>.";
+    } else {
+      titre = "Mode consultation";
+      corps = "Les données affichées viennent des fichiers du site. " +
+        "Connectez-vous pour pouvoir enregistrer vos modifications.";
+    }
+
+    return '<div class="message message--alerte"><strong>' + esc(titre) + "</strong>" + corps + "</div>";
   }
 
   /* =========================================================
@@ -265,6 +396,16 @@
     };
   }
 
+  var detectionSaisieBranchee = false;
+  function brancherDetectionSaisie() {
+    if (detectionSaisieBranchee) return;
+    detectionSaisieBranchee = true;
+    var corps = $("#tiroir-corps");
+    ["input", "change"].forEach(function (ev) {
+      corps.addEventListener(ev, function () { brouillonTouche = true; });
+    });
+  }
+
   function ouvrirEditeur(index) {
     editionIndex = index;
     brouillon = index === null ? produitVierge() : JSON.parse(JSON.stringify(D.produits[index]));
@@ -272,11 +413,12 @@
     $("#tiroir-corps").innerHTML = formulaireProduit(brouillon);
     brancherFormulaireProduit();
     /* Toute saisie marque la fiche comme « en cours » (délégué :
-       couvre aussi les champs d'options ajoutés dynamiquement). */
+       couvre aussi les champs d'options ajoutés dynamiquement).
+       `#tiroir-corps` est un élément permanent : ces écouteurs ne
+       doivent être posés QU'UNE FOIS, sinon ils s'accumulent à
+       chaque ouverture de fiche sans jamais être retirés. */
     brouillonTouche = false;
-    ["input", "change"].forEach(function (ev) {
-      $("#tiroir-corps").addEventListener(ev, function () { brouillonTouche = true; });
-    });
+    brancherDetectionSaisie();
     $("#adm-tiroir").hidden = false;
     $("#adm-overlay").hidden = false;
     document.body.style.overflow = "hidden";
@@ -479,8 +621,8 @@
 
       /* On prévient AVANT le recadrage : découvrir qu'il faut se
          connecter après avoir cadré sa photo est décourageant. */
-      if (!BACK.estConnecte()) {
-        toast("Connectez-vous d'abord : la photo doit être envoyée à la base", true);
+      if (!peutEnregistrer()) {
+        toast(raisonBlocage() + " : la photo ne peut pas être envoyée", true);
         input.value = "";
         return;
       }
@@ -522,8 +664,8 @@
 
     var valider = $("[data-valider]", modale);
     valider.addEventListener("click", function () {
-      if (!BACK.estConnecte()) {
-        toast("Connectez-vous d'abord : la photo doit être envoyée à la base", true);
+      if (!peutEnregistrer()) {
+        toast(raisonBlocage() + " : la photo ne peut pas être envoyée", true);
         return;
       }
 
@@ -709,6 +851,14 @@
      ========================================================= */
   function vueTextes() {
     var c = D.config;
+    /* Filet : une base enregistrée avant l'ajout de ces sections ne
+       les contient pas encore. On repart des valeurs du site plutôt
+       que de casser l'écran. */
+    if (!c.steps) c.steps = { eyebrow: "", title: "", items: [] };
+    if (!Array.isArray(c.steps.items)) c.steps.items = [];
+    if (!c.promises) c.promises = { eyebrow: "", title: "", items: [] };
+    if (!Array.isArray(c.promises.items)) c.promises.items = [];
+    if (!c.ctaFinal) c.ctaFinal = { title: "", text: "", button: "" };
     return (
       '<div class="adm-vue__tete"><div><h1>Textes du site</h1>' +
       "<p>Tous les textes visibles sur la page d'accueil. Les modifications apparaissent après publication.</p></div></div>" +
@@ -736,8 +886,54 @@
       champTexte("about.title", "Titre", c.about.title) +
       champZone("about.text", "Texte de présentation", c.about.text) +
       '<label style="display:block;font-weight:800;font-size:0.88rem;margin-bottom:0.3rem">Points forts</label>' +
-      listeTextes("about.points", c.about.points) + "</div>"
+      listeTextes("about.points", c.about.points) + "</div>" +
+
+      '<div class="bloc"><h3>Étapes de commande</h3>' +
+      '<p class="bloc__note">La section « Comment commander ? » de la page d\'accueil.</p>' +
+      champTexte("steps.eyebrow", "Petite phrase au-dessus du titre", c.steps.eyebrow) +
+      champTexte("steps.title", "Titre de la section", c.steps.title) +
+      listeCouples("steps.items", c.steps.items, "Étape", false) + "</div>" +
+
+      '<div class="bloc"><h3>Engagements</h3>' +
+      '<p class="bloc__note">Le bandeau foncé « Ce que ZAIDAT FOOD vous promet ».</p>' +
+      champTexte("promises.eyebrow", "Petite phrase au-dessus du titre", c.promises.eyebrow) +
+      champTexte("promises.title", "Titre de la section", c.promises.title) +
+      listeCouples("promises.items", c.promises.items, "Engagement", true) + "</div>" +
+
+      '<div class="bloc"><h3>Appel final</h3>' +
+      '<p class="bloc__note">Le dernier bloc de la page d\'accueil, juste avant le pied de page.</p>' +
+      champTexte("ctaFinal.title", "Titre", c.ctaFinal.title) +
+      champZone("ctaFinal.text", "Texte", c.ctaFinal.text) +
+      champTexte("ctaFinal.button", "Texte du bouton", c.ctaFinal.button) + "</div>"
     );
+  }
+
+  /* Liste d'éléments « titre + texte », avec icône facultative.
+     Sert aux étapes de commande et aux engagements. */
+  function listeCouples(chemin, items, libelle, avecIcone) {
+    var lignes = (items || []).map(function (e, i) {
+      var icones = avecIcone
+        ? '<div class="champ" style="margin:0 0 0.5rem"><label>Icône</label>' +
+          '<select data-couple="' + chemin + '" data-i="' + i + '" data-champ="icon">' +
+          ICONES_DISPO.concat(["bag", "scooter", "users", "sparkle", "check-circle", "clock", "wallet"])
+            .filter(function (v, k, t) { return t.indexOf(v) === k; })
+            .map(function (ic) {
+              return '<option value="' + ic + '"' + (ic === e.icon ? " selected" : "") + ">" + ic + "</option>";
+            }).join("") + "</select></div>"
+        : "";
+      return (
+        '<div class="bloc" style="background:var(--cream-soft);padding:0.8rem;margin-bottom:0.6rem">' +
+        '<div class="champ" style="margin:0 0 0.5rem"><label>' + esc(libelle) + " " + (i + 1) + " — titre</label>" +
+        '<input type="text" data-couple="' + chemin + '" data-i="' + i + '" data-champ="title" value="' + esc(e.title || "") + '"></div>' +
+        '<div class="champ" style="margin:0 0 0.5rem"><label>Texte</label>' +
+        '<input type="text" data-couple="' + chemin + '" data-i="' + i + '" data-champ="text" value="' + esc(e.text || "") + '"></div>' +
+        icones +
+        '<button type="button" class="btn-mini btn-mini--danger" data-suppr-couple="' + chemin + '" data-i="' + i + '">Retirer</button>' +
+        "</div>"
+      );
+    }).join("");
+    return lignes +
+      '<button type="button" class="btn-mini" data-ajout-couple="' + chemin + '">+ Ajouter</button>';
   }
 
   /* =========================================================
@@ -870,8 +1066,8 @@
 
     if (btn && input) {
       btn.addEventListener("click", function () {
-        if (!BACK.estConnecte()) {
-          toast("Connectez-vous d'abord : la photo doit être envoyée à la base", true);
+        if (!peutEnregistrer()) {
+          toast(raisonBlocage() + " : la photo ne peut pas être envoyée", true);
           return;
         }
         input.click();
@@ -990,6 +1186,36 @@
         majEtat(); rendre();
       });
     });
+    /* Listes « titre + texte » : étapes de commande, engagements. */
+    $all("[data-couple]").forEach(function (el) {
+      var maj = function () {
+        var t = lire(el.getAttribute("data-couple"));
+        var i = parseInt(el.getAttribute("data-i"), 10);
+        if (!Array.isArray(t) || !t[i]) return;
+        t[i][el.getAttribute("data-champ")] = el.value;
+        majEtat();
+      };
+      el.addEventListener("input", maj);
+      el.addEventListener("change", maj);
+    });
+    $all("[data-suppr-couple]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var t = lire(b.getAttribute("data-suppr-couple"));
+        if (!Array.isArray(t)) return;
+        t.splice(parseInt(b.getAttribute("data-i"), 10), 1);
+        majEtat(); rendre();
+      });
+    });
+    $all("[data-ajout-couple]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var chemin = b.getAttribute("data-ajout-couple");
+        var t = lire(chemin);
+        if (!Array.isArray(t)) { ecrire(chemin, []); t = lire(chemin); }
+        t.push({ title: "", text: "", icon: "sparkle" });
+        majEtat(); rendre();
+      });
+    });
+
     $all("[data-ajout-liste]").forEach(function (b) {
       b.addEventListener("click", function () {
         var chemin = b.getAttribute("data-ajout-liste");
@@ -1018,7 +1244,12 @@
           "Le dashboard fonctionne en consultation : vous voyez les produits, mais le bouton Enregistrer reste inactif.<br>" +
           "Pour l'activer, remplissez <code>js/supabase-config.js</code> — la marche à suivre est dans <code>admin/GUIDE_DASHBOARD.md</code>.</div>"
         : connecte
-          ? '<div class="message message--ok"><strong>Connectée</strong>Vous êtes identifiée comme <code>' + esc(email || "") + "</code>. Vos modifications sont enregistrées directement.</div>"
+          ? (estAdministrateur && !lectureSeule
+              ? '<div class="message message--ok"><strong>Connectée et autorisée</strong>Vous êtes identifiée comme <code>' +
+                esc(email || "") + "</code>. Vos modifications sont enregistrées directement.</div>"
+              : banniereEtat() ||
+                '<div class="message message--alerte"><strong>Enregistrement indisponible</strong>' +
+                "Vous êtes connectée comme <code>" + esc(email || "") + "</code>, mais rien ne peut être enregistré pour l'instant.</div>")
           : '<div class="message message--alerte"><strong>Pas encore connectée</strong>Vous pouvez tout consulter et préparer, mais pas enregistrer.</div>') +
 
       (configure && !connecte
@@ -1060,6 +1291,18 @@
         resultat.innerHTML = '<div class="message message--info">Connexion…</div>';
         BACK.connexion(email, mdp)
           .then(function () {
+            /* Être connectée ne suffit pas : encore faut-il être
+               autorisée à écrire. On le vérifie tout de suite, pour
+               ne pas laisser préparer un travail qui sera refusé. */
+            return verifierAutorisation();
+          })
+          .then(function (autorisee) {
+            if (!autorisee) {
+              toast("Connectée, mais ce compte n'est pas autorisé à modifier le site", true);
+              majEtat();
+              rendre();
+              return;
+            }
             /* Recharger écraserait le travail en cours : on ne le fait
                que si rien n'a été modifié. Sinon on garde les
                modifications, prêtes à être enregistrées. */
@@ -1096,13 +1339,29 @@
      PUBLICATION
      ========================================================= */
   function ouvrirPublication() {
-    /* Déconnectée : on ne reste pas muet, on explique et on emmène
-       à l'écran de connexion plutôt que de laisser croire à une panne. */
+    /* On ne reste jamais muet : on explique ce qui bloque et on emmène
+       au bon endroit, plutôt que de laisser croire à une panne.
+
+       L'ordre compte. Quand la base est injoignable ou pas encore
+       reliée, se connecter n'y changerait rien : proposer la connexion
+       enverrait la cuisinière saisir un mot de passe pour rien. Ces
+       deux cas passent donc AVANT le contrôle de connexion. */
+    if (motifLectureSeule === "base-injoignable" || motifLectureSeule === "non-configure") {
+      allerA("connexion");
+      toast(raisonBlocage() + " — vos modifications sont conservées.", true);
+      return;
+    }
     if (!BACK.estConnecte()) {
       allerA("connexion");
       toast("Connectez-vous d'abord : vos modifications sont conservées.", true);
       var champ = $("#sb-email");
       if (champ) champ.focus();
+      return;
+    }
+    if (lectureSeule) {
+      /* Aucun faux enregistrement : compte non autorisé. */
+      allerA("connexion");
+      toast(raisonBlocage() + " — vos modifications sont conservées.", true);
       return;
     }
 
@@ -1144,19 +1403,32 @@
       var etape = $("#pub-etape");
       if (etape) etape.textContent = fait + " / " + total + " — " + nom;
     })
-      .then(function () {
+      .then(function (menage) {
         original = instantane();
-        imagesEnAttente = {};
         /* Premier enregistrement d'une base qui était vide : les
            données sont maintenant bien dans Supabase, la bannière
            « Mode consultation » n'a plus lieu d'être. */
         donneesDepuisBase = true;
         D.baseVide = false;
         majEtat();
+
+        var complement = "";
+        if (menage && menage.supprimees) {
+          complement = "<br><small>" + menage.supprimees +
+            " ancienne(s) photo(s) supprimée(s) du stockage.</small>";
+        }
+        if (menage && menage.echecs && menage.echecs.length) {
+          complement += "<br><small>" + menage.echecs.length +
+            " ancienne(s) photo(s) n'ont pas pu être supprimées. " +
+            "Sans conséquence pour le site : elles occupent seulement de la place. " +
+            "Elles seront reproposées au prochain enregistrement.</small>";
+        }
+
         journal.className = "message message--ok";
         journal.innerHTML =
           "<strong>Enregistré</strong>Le site est à jour. " +
-          'Ouvrez <a href="/index.html" target="_blank" rel="noopener">le site</a> pour vérifier.';
+          'Ouvrez <a href="/index.html" target="_blank" rel="noopener">le site</a> pour vérifier.' +
+          complement;
         bouton.textContent = "Fermer";
         bouton.disabled = false;
         bouton.onclick = function () { $("#modale-publier").hidden = true; rendre(); };
@@ -1164,10 +1436,32 @@
       })
       .catch(function (err) {
         journal.className = "message message--erreur";
+
+        if (err && err.conflit) {
+          /* Conflit : rien n'a été écrit. On propose l'unique action
+             sensée — recharger — plutôt qu'un « Réessayer » qui
+             écraserait le travail de l'autre appareil. */
+          journal.innerHTML =
+            "<strong>Enregistrement annulé — le site a changé ailleurs</strong>" +
+            esc(err.message) +
+            "<br><br><strong>Aucune modification n'a été perdue côté base.</strong> " +
+            "Vos changements sont toujours affichés à l'écran : notez-les avant de recharger.";
+          bouton.disabled = false;
+          bouton.textContent = "Recharger les données du site";
+          bouton.onclick = function () {
+            if (!confirm("Recharger effacera vos modifications non enregistrées.\nContinuer ?")) return;
+            $("#modale-publier").hidden = true;
+            charger();
+          };
+          toast("Le site a été modifié ailleurs — rien n'a été écrasé", true);
+          return;
+        }
+
         journal.innerHTML = "<strong>Échec de l'enregistrement</strong>" + esc(err.message) +
           "<br>Vos modifications sont toujours là : vous pouvez réessayer.";
         bouton.disabled = false;
         bouton.textContent = "Réessayer";
+        bouton.onclick = lancerPublication;
         toast("L'enregistrement a échoué", true);
       });
   }
@@ -1187,12 +1481,12 @@
     else if (vueCourante === "temoignages") { vue.innerHTML = vueTemoignages(); brancherTemoignages(); }
     else if (vueCourante === "connexion") { vue.innerHTML = vueConnexion(); brancherConnexion(); }
 
-    if (!donneesDepuisBase && vueCourante !== "connexion") {
-      vue.insertAdjacentHTML("afterbegin",
-        '<div class="message message--alerte"><strong>Mode consultation</strong>' +
-        "Les données affichées viennent des fichiers du site. Connectez-vous pour pouvoir enregistrer vos modifications.</div>");
+    if (vueCourante !== "connexion") {
+      var banniere = banniereEtat();
+      if (banniere) vue.insertAdjacentHTML("afterbegin", banniere);
     }
     majEtat();
+    mesurerEnTete();
   }
 
   /* Bascule vers un écran donné, aussi bien depuis le menu que
@@ -1233,6 +1527,16 @@
   /* ---------- Démarrage ---------- */
   document.addEventListener("DOMContentLoaded", function () {
     initNavigation();
+
+    /* L'en-tête change de hauteur selon la largeur de l'écran et la
+       longueur de l'état affiché : on la mesure au lieu de la deviner. */
+    mesurerEnTete();
+    if (window.ResizeObserver) {
+      new ResizeObserver(mesurerEnTete).observe($(".adm-header"));
+    } else {
+      window.addEventListener("resize", mesurerEnTete);
+    }
+
     if (!BACK.estConnecte()) {
       vueCourante = "connexion";
       $all(".adm-nav__item").forEach(function (b) {

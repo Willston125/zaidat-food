@@ -89,6 +89,7 @@
     }
     var ldEl = document.createElement("script");
     ldEl.type = "application/ld+json";
+    ldEl.setAttribute("data-produit", "");
     ldEl.textContent = JSON.stringify(ld);
     document.head.appendChild(ldEl);
 
@@ -309,5 +310,19 @@
     ZF.bindImageFallbacks(grid);
   }
 
-  ZF.pret(render);
+  ZF.pret(function () {
+    render();
+
+    /* Données plus fraîches : on réaffiche la fiche. Le panier n'est
+       pas touché, et la quantité repart à 1 — c'est volontaire, un
+       prix qui vient de changer ne doit pas être validé à l'aveugle. */
+    ZF.surMajDonnees(function () {
+      var racine = $("#product-root");
+      if (!racine) return;
+      /* Les balises de partage déjà injectées seraient dupliquées. */
+      var ancienLd = document.querySelector('script[type="application/ld+json"][data-produit]');
+      if (ancienLd) ancienLd.remove();
+      render();
+    });
+  });
 })();

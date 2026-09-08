@@ -3,15 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- ZF:META-DEBUT
+       Bloc remplacé à la volée par api/produit.js avec le vrai titre,
+       la vraie description et la vraie photo du produit demandé.
+       Indispensable : les robots de WhatsApp et de Facebook
+       n'exécutent pas le JavaScript de la page. Les valeurs
+       ci-dessous ne s'affichent que si la fonction est indisponible. -->
   <title>Produit — ZAIDAT FOOD</title>
   <meta name="description" content="Découvrez ce produit fait maison par ZAIDAT FOOD et ajoutez-le à votre panier.">
   <meta property="og:type" content="product">
+  <meta property="og:site_name" content="ZAIDAT FOOD">
   <meta property="og:title" content="ZAIDAT FOOD — Produit maison">
+  <meta property="og:description" content="Découvrez ce produit fait maison par ZAIDAT FOOD et ajoutez-le à votre panier.">
   <meta property="og:locale" content="fr_FR">
+  <meta name="twitter:card" content="summary_large_image">
+  <!-- ZF:META-FIN -->
   <link rel="icon" type="image/png" href="assets/img/favicon-64.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700;6..12,800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/fonts/polices.css">
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -22,7 +30,7 @@
   <header class="site-header">
     <div class="container site-header__inner">
       <a class="brand" href="index.html" aria-label="ZAIDAT FOOD — retour à l'accueil">
-        <img src="assets/img/logo-256.png" alt="" width="46" height="46">
+        <img src="assets/img/logo-96.png" alt="" width="46" height="46">
         <span><strong>ZAIDAT FOOD</strong><small>Cuisine artisanale</small></span>
       </a>
       <nav class="main-nav" id="main-nav" aria-label="Navigation principale">
@@ -61,7 +69,7 @@
       <div class="footer-grid">
         <div>
           <a class="brand" href="index.html">
-            <img src="assets/img/logo-256.png" alt="" width="46" height="46">
+            <img src="assets/img/logo-96.png" alt="" width="46" height="46">
             <span><strong>ZAIDAT FOOD</strong><small>Cuisine artisanale</small></span>
           </a>
           <p style="font-size:0.9rem;color:rgba(250,243,232,0.75);margin-top:0.8rem">Des plats, gâteaux et douceurs faits maison, préparés avec amour et inspirés des saveurs des Comores.</p>
@@ -99,6 +107,7 @@
   <script src="js/supabase.js"></script>
   <script src="js/config.js"></script>
   <script src="js/products.js"></script>
+  <script src="js/valider.js"></script>
   <script src="js/store.js"></script>
   <script src="js/cart.js"></script>
   <script src="js/whatsapp.js"></script>
