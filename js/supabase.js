@@ -143,6 +143,57 @@ window.SB = (function () {
     });
   }
 
+  /* ---------- Autorisation ----------
+     Être connectée ne suffit pas à modifier le site : encore
+     faut-il figurer dans la table `administrateurs` de la base.
+     Cette distinction est le cœur de la sécurité — sans elle,
+     n'importe quel compte créé librement pourrait tout réécrire.
+     Le résultat est mis en cache le temps de la session pour ne
+     pas interroger la base à chaque clic. */
+
+  var cacheAdmin = { jeton: null, valeur: null };
+
+  function estAdministrateur() {
+    if (!estConnecte()) return Promise.resolve(false);
+    var s = lireSession();
+    if (cacheAdmin.jeton === s.access_token && cacheAdmin.valeur !== null) {
+      return Promise.resolve(cacheAdmin.valeur);
+    }
+    return appel("/rest/v1/rpc/est_administrateur", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    })
+      .then(function (r) {
+        var v = r === true || r === "true";
+        cacheAdmin = { jeton: s.access_token, valeur: v };
+        return v;
+      })
+      .catch(function () {
+        /* Fonction absente (script SQL pas encore relancé) : on se
+           rabat sur la lecture de sa propre ligne, autorisée par la
+           règle « lecture de son propre acces ». */
+        return appel("/rest/v1/administrateurs?select=id&limit=1")
+          .then(function (lignes) {
+            var v = Array.isArray(lignes) && lignes.length > 0;
+            cacheAdmin = { jeton: s.access_token, valeur: v };
+            return v;
+          })
+          .catch(function () { return false; });
+      });
+  }
+
+  function oublierAutorisation() {
+    cacheAdmin = { jeton: null, valeur: null };
+  }
+
+  /* Message unique, pour ne pas laisser croire à une panne quand
+     il s'agit en réalité d'un droit manquant. */
+  var MSG_NON_ADMIN =
+    "Ce compte n'est pas autorisé à modifier le site. " +
+    "Demandez à ce qu'il soit déclaré administrateur dans Supabase " +
+    "(voir admin/GUIDE_DASHBOARD.md).";
+
   /* ---------- Authentification ---------- */
 
   function connexion(email, motDePasse) {
@@ -165,6 +216,7 @@ window.SB = (function () {
   function deconnexion() {
     var s = lireSession();
     ecrireSession(null);
+    oublierAutorisation();
     if (!s || !s.access_token) return Promise.resolve();
     return fetch(base() + "/auth/v1/logout", {
       method: "POST",
@@ -178,12 +230,40 @@ window.SB = (function () {
     return appel("/rest/v1/produits?select=*&order=ordre.asc,cree_le.asc");
   }
 
+  /* Signature légère de l'état de la base : sert à détecter qu'un
+     autre appareil a enregistré depuis le chargement (voir backend.js).
+
+     La colonne `modifie_le` est ajoutée par admin/supabase-installation.sql.
+     Si elle manque, c'est que le script n'a pas été relancé : on le dit
+     clairement plutôt que de laisser passer une erreur technique
+     incompréhensible — ou, pire, de continuer sans garde-fou. */
+  function lireVersions() {
+    return appel("/rest/v1/produits?select=id,slug,modifie_le").catch(function (e) {
+      if (/modifie_le/.test(e.message || "")) {
+        throw new Error(
+          "La base n'est pas à jour : la colonne « modifie_le » est absente. " +
+          "Relancez le script admin/supabase-installation.sql en entier dans le " +
+          "SQL Editor de Supabase, puis rechargez cette page. " +
+          "(Cette colonne protège vos données contre l'écrasement par un autre appareil.)"
+        );
+      }
+      throw e;
+    });
+  }
+
+  /* IMPORTANT — une écriture refusée par les règles de sécurité ne
+     produit PAS d'erreur HTTP : PostgREST renvoie simplement zéro
+     ligne modifiée. Sans la vérification ci-dessous, le dashboard
+     annoncerait « Enregistré » alors que rien n'a changé. */
   function creerProduit(p) {
     return appel("/rest/v1/produits", {
       method: "POST",
       headers: { "Content-Type": "application/json", Prefer: "return=representation" },
       body: JSON.stringify(p),
-    }).then(function (d) { return d && d[0]; });
+    }).then(function (d) {
+      if (!d || !d[0]) throw new Error(MSG_NON_ADMIN);
+      return d[0];
+    });
   }
 
   function majProduit(id, p) {
@@ -191,11 +271,20 @@ window.SB = (function () {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Prefer: "return=representation" },
       body: JSON.stringify(p),
-    }).then(function (d) { return d && d[0]; });
+    }).then(function (d) {
+      if (!d || !d[0]) throw new Error(MSG_NON_ADMIN);
+      return d[0];
+    });
   }
 
   function supprimerProduit(id) {
-    return appel("/rest/v1/produits?id=eq." + encodeURIComponent(id), { method: "DELETE" });
+    return appel("/rest/v1/produits?id=eq." + encodeURIComponent(id), {
+      method: "DELETE",
+      headers: { Prefer: "return=representation" },
+    }).then(function (d) {
+      if (!d || !d[0]) throw new Error(MSG_NON_ADMIN);
+      return d[0];
+    });
   }
 
   /* ---------- Réglages (textes, contact, horaires…) ---------- */
@@ -208,12 +297,20 @@ window.SB = (function () {
     });
   }
 
-  /* `upsert` : crée la clé si absente, la remplace sinon */
+  /* `upsert` : crée la clé si absente, la remplace sinon.
+     `return=representation` n'est pas décoratif : c'est lui qui
+     permet de constater que la ligne a réellement été écrite. */
   function enregistrerReglage(cle, valeur) {
     return appel("/rest/v1/reglages", {
       method: "POST",
-      headers: { "Content-Type": "application/json", Prefer: "resolution=merge-duplicates" },
+      headers: {
+        "Content-Type": "application/json",
+        Prefer: "resolution=merge-duplicates,return=representation",
+      },
       body: JSON.stringify({ cle: cle, valeur: valeur }),
+    }).then(function (d) {
+      if (!d || !d[0]) throw new Error(MSG_NON_ADMIN);
+      return d[0];
     });
   }
 
@@ -258,7 +355,31 @@ window.SB = (function () {
     return base() + "/storage/v1/object/public/" + config().bucket + "/" + nomFichier;
   }
 
+  /* Chemin de stockage à partir d'une adresse publique.
+     « https://…/object/public/photos/produits/x-900-ab.jpg »
+       -> « produits/x-900-ab.jpg »
+     Renvoie null si l'adresse ne vient pas de NOTRE dossier de
+     photos : on ne supprime jamais un fichier qu'on ne reconnaît
+     pas, et surtout pas d'après une adresse arbitraire. */
+  function cheminDepuisUrl(url) {
+    if (!url) return null;
+    var prefixe = base() + "/storage/v1/object/public/" + config().bucket + "/";
+    var u = String(url);
+    if (u.indexOf(prefixe) !== 0) return null;
+    var chemin = u.slice(prefixe.length).split("?")[0];
+    /* Mêmes dossiers que ceux autorisés par les règles de la base. */
+    if (!/^(produits|lifestyle|galerie)\/[A-Za-z0-9][A-Za-z0-9._-]*\.(jpg|jpeg|png|webp)$/i.test(chemin)) {
+      return null;
+    }
+    return chemin;
+  }
+
+  /* Supprime une photo du stockage. Contrairement à la version
+     précédente, l'échec n'est plus avalé en silence : l'appelant
+     décide quoi en faire (un nettoyage raté ne doit jamais faire
+     perdre la nouvelle photo, mais il doit être signalé). */
   function supprimerPhoto(nomFichier) {
+    if (!nomFichier) return Promise.resolve({ ok: false, raison: "chemin vide" });
     return assurerJetonValide()
       .then(function () {
         return fetch(base() + "/storage/v1/object/" + config().bucket + "/" + nomFichier, {
@@ -266,23 +387,25 @@ window.SB = (function () {
           headers: entetes(),
         });
       })
-      .catch(function () { /* sans gravité : la photo devient orpheline */ });
-  }
-
-  /* Vérifie que l'adresse et la clé fonctionnent vraiment */
-  function tester() {
-    return appel("/rest/v1/produits?select=id&limit=1")
-      .then(function () { return { ok: true }; })
-      .catch(function (e) { return { ok: false, message: e.message }; });
+      .then(function (r) {
+        if (r.ok) return { ok: true };
+        return r.text().then(function (t) {
+          return { ok: false, raison: t || ("Erreur " + r.status) };
+        });
+      })
+      .catch(function (e) { return { ok: false, raison: e.message }; });
   }
 
   return {
     estConfigure: estConfigure,
     estConnecte: estConnecte,
+    estAdministrateur: estAdministrateur,
+    oublierAutorisation: oublierAutorisation,
     emailConnecte: emailConnecte,
     connexion: connexion,
     deconnexion: deconnexion,
     lireProduits: lireProduits,
+    lireVersions: lireVersions,
     creerProduit: creerProduit,
     majProduit: majProduit,
     supprimerProduit: supprimerProduit,
@@ -290,7 +413,7 @@ window.SB = (function () {
     enregistrerReglage: enregistrerReglage,
     televerserPhoto: televerserPhoto,
     supprimerPhoto: supprimerPhoto,
+    cheminDepuisUrl: cheminDepuisUrl,
     urlPublique: urlPublique,
-    tester: tester,
   };
 })();

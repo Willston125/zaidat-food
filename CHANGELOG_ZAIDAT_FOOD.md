@@ -1,5 +1,85 @@
 # CHANGELOG — ZAIDAT FOOD
 
+## 2026-09-08 — Correction des 22 constats de l'audit technique
+
+### Sécurité
+
+- **Écriture réservée aux administratrices déclarées.** Les règles de la base
+  accordaient tous les droits à toute personne connectée. Comme la clé publique
+  du site permet de créer un compte, un inconnu pouvait remplacer le numéro
+  WhatsApp de commande et détourner toutes les commandes. Une table
+  `administrateurs`, une fonction `est_administrateur()` et des règles séparées
+  pour chaque opération remplacent l'ancien `for all ... using (true)`.
+  Le stockage des photos est restreint aux trois dossiers attendus.
+  Migration relançable sans rien détruire ; vérifiée sur PostgreSQL 16 pour
+  quatre profils d'accès.
+- **Validation de tout ce qui vient de la base** (`js/valider.js`) : les liens
+  de réseaux sociaux n'acceptent plus que `https:`, et un numéro WhatsApp
+  invalide ne remplace jamais le numéro officiel du site.
+- **En-têtes de sécurité** dans `vercel.json` : CSP adaptée aux ressources
+  réellement utilisées (sans `unsafe-eval` ni joker), `nosniff`,
+  `Referrer-Policy`, `frame-ancestors 'none'`, `Permissions-Policy`, HSTS.
+
+### Fiabilité et rapidité
+
+- **Le site n'attend plus la base pour s'afficher.** Il part du cache local,
+  sinon des fichiers du site, et se met à jour en silence quand Supabase
+  répond. Une base lente laissait auparavant la page sans menu, sans panier et
+  sans bouton WhatsApp pendant six secondes.
+- **Les vignettes 450 px sont enfin utilisées** dans les cartes du menu. Le
+  site chargeait les images 900 px, annulant l'optimisation faite par le
+  dashboard.
+- **Le cache local préserve les vrais prix** quand la base est en pause. Le
+  repli sur les fichiers affichait « Prix sur demande » sur tout le menu.
+- **Le dashboard reste utilisable hors ligne**, en mode consultation, au lieu
+  de rester bloqué sur « Chargement… ».
+- **Les photos remplacées ou supprimées sont nettoyées** du stockage, après
+  confirmation de l'enregistrement.
+- **Garde-fou de concurrence** : un onglet resté ouvert ne peut plus écraser
+  des produits ajoutés depuis un autre appareil.
+- **Polices auto-hébergées** : plus aucun appel à Google Fonts, qui bloquait
+  l'affichage de la page entière quand il répondait mal.
+
+### Partage et référencement
+
+- **Les fiches produits partagées sur WhatsApp affichent enfin leur titre et
+  leur photo.** Les balises étaient remplies en JavaScript, que les robots
+  d'aperçu n'exécutent pas. Une fonction Vercel (`api/produit.js`) les écrit
+  désormais dans le HTML servi.
+- Adresses canoniques sur toutes les pages, `sitemap.xml` tenu à jour d'après
+  la base, déclaré dans `robots.txt`.
+
+### Interface et accessibilité
+
+- Le nom de la marque ne passe plus sous les boutons de l'en-tête sur mobile.
+- La barre « Enregistrer » du dashboard ne recouvre plus le dernier produit.
+- Les onglets du dashboard ne disparaissent plus derrière l'en-tête.
+- Étapes de commande, engagements et appel final deviennent modifiables depuis
+  le dashboard, comme le guide l'annonçait.
+- Bouton « + » ramené à 44 × 44 px, badge « Populaire » conforme AA (4,87:1),
+  cibles tactiles des liens portées à 24 px.
+
+### Conformité et documentation
+
+- Politique de confidentialité corrigée : elle nomme Vercel, Supabase et
+  WhatsApp au lieu d'affirmer qu'aucune donnée technique n'est transmise.
+- Mentions légales complétées de ce qui est connu ; ce qui manque est listé
+  dans le README plutôt qu'inventé.
+- README et guide du dashboard mis en accord avec le fonctionnement réel.
+
+### Hygiène
+
+- Code mort retiré après vérification de toutes ses références
+  (`serialize.js` réduit à sa seule fonction utilisée, exports inutilisés).
+- Fuite d'écouteurs corrigée à l'ouverture de la fiche produit.
+- Affiche mobile de la vidéo branchée, logo servi à la bonne taille.
+- Plus de cache `immutable` d'un an sur des fichiers remplaçables.
+
+**258 vérifications automatisées, toutes au vert** (détail dans le README).
+
+---
+
+
 ## 2026-07-25 — v9 : menu mobile réparé + dashboard de gestion
 
 ### Le menu mobile était tronqué

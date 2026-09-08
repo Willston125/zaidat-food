@@ -65,6 +65,40 @@ connectée peut le modifier.
 C'est cet email et ce mot de passe qui serviront à se connecter au
 dashboard.
 
+### Étape 3 bis — Autoriser ce compte à modifier le site ⚠️
+
+**Créer le compte ne suffit pas.** Par sécurité, un compte connecté ne
+peut rien modifier tant qu'il n'a pas été explicitement déclaré
+administrateur. C'est ce qui empêche un inconnu qui se serait créé un
+compte de toucher à vos prix ou à votre numéro WhatsApp.
+
+Dans **SQL Editor**, lancer cette seule ligne, avec l'adresse de
+l'étape 3 :
+
+```sql
+select zf_admin.promouvoir_administrateur('adresse@exemple.com');
+```
+
+La réponse attendue est :
+*« OK — adresse@exemple.com peut maintenant modifier le site. »*
+
+Pour vérifier à tout moment qui est autorisé :
+
+```sql
+select email, cree_le from administrateurs order by cree_le;
+```
+
+### Étape 3 ter — Fermer l'inscription libre ⚠️
+
+Par défaut, Supabase laisse **n'importe qui** créer un compte avec la
+clé publique du site. Ce compte ne pourrait rien modifier (étape 3 bis),
+mais autant fermer aussi cette porte :
+
+**Authentication** → **Sign In / Providers** → **Email** → décocher
+**« Allow new users to sign up »** → **Save**.
+
+Ce sont deux protections indépendantes. Posez les deux.
+
 ### Étape 4 — Relier le site à la base
 
 1. Menu de gauche → **Project Settings** (roue dentée) → **API**.
@@ -145,10 +179,18 @@ réactive en un clic.
 
 ### Modifier les textes du site
 
-Onglet **Textes du site** : titre d'accueil, présentation, étapes de
-commande, engagements, appel final.
+Onglet **Textes du site** :
+
+- **Marque** — nom et sous-titre ;
+- **Bandeau du haut** — les phrases qui défilent tout en haut ;
+- **Grande image d'accueil** — titre, sous-titre, boutons ;
+- **Section « La cuisine de… »** — présentation et points forts ;
+- **Étapes de commande** — les quatre encadrés « Comment commander ? » ;
+- **Engagements** — le bandeau foncé, avec le choix de l'icône ;
+- **Appel final** — le dernier bloc avant le pied de page.
+
 Onglet **Contact & livraison** : numéro WhatsApp, horaires, zones,
-réseaux sociaux.
+moyens de paiement, réseaux sociaux, devise.
 
 ### Témoignages
 
@@ -184,8 +226,26 @@ email*.
 Se reconnecter. Par sécurité, la connexion ne dure pas indéfiniment.
 
 **Le bouton Enregistrer reste grisé**
-Soit rien n'a été modifié, soit vous n'êtes pas connectée : voir
-l'onglet **Connexion**.
+Rien n'a été modifié. Dès qu'une modification est faite, il s'active.
+
+**« Compte non autorisé »**
+Vous êtes bien connectée, mais l'étape 3 bis n'a pas été faite pour ce
+compte. Lancez `select zf_admin.promouvoir_administrateur('votre@email');`
+dans le SQL Editor.
+
+**« Base injoignable — mode consultation »**
+Le dashboard affiche les dernières données connues mais ne peut rien
+enregistrer. Le plus souvent, le projet Supabase gratuit s'est mis en
+pause : ouvrez Supabase, cliquez sur *Restore*, puis rechargez la page.
+**Le site public, lui, continue de fonctionner normalement** pendant ce
+temps.
+
+**« Le site a été modifié ailleurs »**
+Quelqu'un a enregistré depuis un autre appareil (ou un autre onglet)
+depuis que vous avez ouvert cette page. Rien n'a été écrasé : notez vos
+modifications, rechargez, puis refaites-les. C'est ce garde-fou qui
+empêche un onglet oublié sur un téléphone de supprimer des produits
+ajoutés depuis l'ordinateur.
 
 **Le dashboard affiche « Base de données pas encore reliée »**
 `js/supabase-config.js` est vide, ou le site n'a pas été republié après
@@ -203,11 +263,31 @@ retombé sur ses fichiers de secours. Réveiller le projet dans Supabase.
 
 ## Sécurité
 
+Le site repose sur **trois barrières**, indépendantes les unes des autres :
+
+1. **Il faut un compte** pour se connecter au dashboard ;
+2. **Il faut être déclarée administratrice** pour enregistrer quoi que ce
+   soit — c'est la table `administrateurs`, remplie uniquement depuis le
+   SQL Editor de Supabase. Un compte ordinaire ne peut pas s'y ajouter
+   lui-même, même en connaissant la clé publique du site ;
+3. **L'inscription libre est fermée**, si l'étape 3 ter a été faite.
+
+Au quotidien :
+
 - Ne jamais partager le mot de passe du compte.
 - Sur un téléphone ou ordinateur partagé, **se déconnecter** après usage.
-- Ne jamais copier la clé **service_role** dans le site.
-- Pour retirer un accès : Supabase → Authentication → Users → supprimer
-  l'utilisateur.
+- Ne jamais copier la clé **service_role** dans le site. La clé
+  **anon public**, elle, est faite pour être publique : elle ne permet
+  que de lire.
+- Pour retirer un accès :
+  ```sql
+  select zf_admin.retirer_administrateur('adresse@exemple.com');
+  ```
+  puis supprimer l'utilisateur dans Authentication → Users.
+
+> **Si vous relancez un jour le script SQL**, il referme l'écriture à
+> tout le monde : il faut alors refaire l'étape 3 bis. C'est voulu — un
+> script d'installation ne doit jamais laisser une porte ouverte.
 
 ---
 

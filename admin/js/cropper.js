@@ -175,7 +175,7 @@ window.Cropper = (function () {
       });
     }
 
-    return { exporter: exporter, redessiner: dimensionner };
+    return { exporter: exporter };
   }
 
   /* Retire l'en-tête "data:image/jpeg;base64," avant l'envoi */
@@ -191,8 +191,6 @@ window.Cropper = (function () {
   return {
     chargerFichier: chargerFichier,
     creer: creer,
-    base64Seul: base64Seul,
     poidsKo: poidsKo,
-    TAILLES: TAILLES,
   };
 })();

@@ -2,9 +2,11 @@ User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /admin/
+Disallow: /api/
 Disallow: /commande.html
 Disallow: /mentions-legales.html
 Disallow: /confidentialite.html
 
-# Sitemap : à ajouter après le déploiement, une fois le domaine connu.
-# Sitemap: https://votre-domaine/sitemap.xml
+# Le plan du site est produit à la demande par api/sitemap.js : il
+# suit automatiquement les produits ajoutés depuis le dashboard.
+Sitemap: https://zaidat-food.vercel.app/sitemap.xml

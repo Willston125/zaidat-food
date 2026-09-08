@@ -59,6 +59,54 @@ const SITE_CONFIG = {
     ],
   },
 
+  /* --- « Comment commander ? » -----------------------------
+     Modifiable depuis le dashboard, onglet « Textes du site ».
+     Ces étapes décrivent le parcours RÉEL : aucun formulaire
+     n'est obligatoire, tout se règle dans la conversation.   */
+  steps: {
+    eyebrow: "C'est simple",
+    title: "Comment commander ?",
+    items: [
+      {
+        title: "Choisissez vos produits",
+        text: "Parcourez le menu et laissez-vous tenter par nos plats et douceurs maison.",
+      },
+      {
+        title: "Ajoutez-les au panier",
+        text: "Sélectionnez la quantité et vos éventuelles personnalisations.",
+      },
+      {
+        title: "Envoyez sur WhatsApp",
+        text: "Un seul clic : votre message part pré-rempli. Aucun formulaire obligatoire.",
+      },
+      {
+        title: "On confirme ensemble",
+        text: "ZAIDAT FOOD vous répond, confirme le prix, la date et la livraison.",
+      },
+    ],
+  },
+
+  /* --- « Nos engagements » ---------------------------------
+     `icon` = nom d'une icône de js/icons.js, sans le préfixe « i- ». */
+  promises: {
+    eyebrow: "Nos engagements",
+    title: "Ce que ZAIDAT FOOD vous promet",
+    items: [
+      { icon: "heart", title: "Préparé avec soin", text: "Chaque commande est cuisinée avec attention" },
+      { icon: "leaf", title: "Produits frais", text: "Des ingrédients choisis et travaillés maison" },
+      { icon: "bag", title: "Commande simple", text: "Un panier, un message WhatsApp, c'est parti" },
+      { icon: "scooter", title: "Livraison selon disponibilité", text: "Ou retrait directement auprès de la cuisinière" },
+      { icon: "users", title: "Service humain", text: "Une vraie personne vous répond et vous conseille" },
+    ],
+  },
+
+  /* --- Appel final, en bas de la page d'accueil ------------ */
+  ctaFinal: {
+    title: "Une envie particulière ?",
+    text: "Préparons votre commande ensemble — dites-nous ce qui vous ferait plaisir.",
+    button: "Composer ma commande",
+  },
+
   /* --- Horaires (laisser vide tant que non confirmés) ------ */
   hours: [],
 

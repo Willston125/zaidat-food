@@ -115,6 +115,54 @@
         return "<li>" + ZF.icon("sparkle", "icon--sm") + "<span>" + esc(t) + "</span></li>";
       }).join("");
     }
+
+    renderSteps();
+    renderPromises();
+    renderCtaFinal();
+  }
+
+  /* Petit utilitaire : n'écrase un texte que si la configuration en
+     fournit un. Le contenu écrit dans index.html reste le repli. */
+  function texteSi(id, valeur) {
+    var el = document.getElementById(id);
+    if (el && valeur) el.textContent = valeur;
+  }
+
+  /* ---------- « Comment commander ? » (modifiable au dashboard) ---------- */
+  function renderSteps() {
+    var c = SITE_CONFIG.steps;
+    if (!c) return;
+    texteSi("steps-eyebrow", c.eyebrow);
+    texteSi("steps-title", c.title);
+    var grid = $("#steps-grid");
+    if (!grid || !Array.isArray(c.items) || !c.items.length) return;
+    grid.innerHTML = c.items.map(function (e) {
+      return '<div class="step"><h3>' + esc(e.title || "") + "</h3><p>" + esc(e.text || "") + "</p></div>";
+    }).join("");
+  }
+
+  /* ---------- « Nos engagements » (modifiable au dashboard) ---------- */
+  function renderPromises() {
+    var c = SITE_CONFIG.promises;
+    if (!c) return;
+    texteSi("promises-eyebrow", c.eyebrow);
+    texteSi("promises-title", c.title);
+    var grid = $("#promises-grid");
+    if (!grid || !Array.isArray(c.items) || !c.items.length) return;
+    grid.innerHTML = c.items.map(function (e) {
+      return '<div class="promise">' + ZF.icon(e.icon || "sparkle", "icon--xl") +
+        "<strong>" + esc(e.title || "") + "</strong>" +
+        "<span>" + esc(e.text || "") + "</span></div>";
+    }).join("");
+  }
+
+  /* ---------- Appel final ---------- */
+  function renderCtaFinal() {
+    var c = SITE_CONFIG.ctaFinal;
+    if (!c) return;
+    texteSi("cta-title", c.title);
+    texteSi("cta-text", c.text);
+    texteSi("cta-button", c.button);
   }
 
   /* ---------- Témoignages (uniquement s'ils existent) ---------- */
@@ -190,7 +238,14 @@
     /* Le visiteur a demandé de réduire les animations */
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    var src = window.innerWidth >= 900
+    var grandEcran = window.innerWidth >= 900;
+
+    /* Sur grand écran seulement, on passe à l'affiche haute définition.
+       Sur téléphone, la version légère déjà chargée suffit largement
+       et économise une cinquantaine de kilo-octets. */
+    if (grandEcran) video.poster = "assets/video/hero-poster.jpg";
+
+    var src = grandEcran
       ? "assets/video/hero-1280.mp4"
       : "assets/video/hero-854.mp4";
 
@@ -221,8 +276,9 @@
     });
   }
 
-  /* On attend les données (Supabase ou fichiers locaux) avant
-     d'afficher, pour ne jamais montrer un prix qui va changer. */
+  /* La page s'affiche immédiatement avec la meilleure source déjà
+     disponible (cache local, sinon fichiers du site). Rien n'attend
+     le réseau. */
   ZF.pret(function () {
     initHeroVideo();
     renderConfigTexts();
@@ -232,5 +288,22 @@
     renderTestimonials();
     renderGallery();
     initQuickAdd();
+
+    /* Quand Supabase répond, les contenus se remettent à jour sur
+       place. Le filtre et la recherche en cours sont conservés :
+       on ne renvoie pas la visiteuse au début de son parcours. */
+    ZF.surMajDonnees(function () {
+      var categorieValide = currentCategory === "all" ||
+        CATEGORIES.some(function (c) { return c.id === currentCategory; });
+      if (!categorieValide) currentCategory = "all";
+
+      renderConfigTexts();
+      renderCategories();
+      /* renderCategories réinitialise l'état visuel des filtres :
+         on le repositionne sur la catégorie réellement affichée. */
+      setCategory(currentCategory);
+      renderTestimonials();
+      renderGallery();
+    });
   });
 })();

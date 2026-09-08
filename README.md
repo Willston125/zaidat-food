@@ -2,7 +2,7 @@
 
 Site e-commerce alimentaire complet pour ZAIDAT FOOD (cuisine artisanale comorienne) :
 menu interactif, fiches produits immersives (photo produit + scène lifestyle),
-panier persistant et tunnel de commande WhatsApp.
+panier persistant et commande WhatsApp en un clic.
 
 **Stack : HTML / CSS / JavaScript pur — aucun build, aucune dépendance.**
 Le site fonctionne sur n'importe quel hébergement statique.
@@ -137,21 +137,29 @@ par ligne.
 ```
 ├── index.html              Accueil (hero, catégories, menu, sections)
 ├── produit.html            Fiche produit (?p=slug — URL partageable)
-├── commande.html           Panier + tunnel de commande WhatsApp (3 étapes)
+├── commande.html           Panier + commande WhatsApp (formulaire facultatif)
 ├── mentions-legales.html   Page légale minimale
 ├── confidentialite.html    Politique de confidentialité
 ├── css/styles.css          Design system complet (terracotta/crème/doré)
+├── api/
+│   ├── produit.js          Sert la fiche produit avec ses vraies balises
+│   │                       de partage (WhatsApp, Facebook n'exécutent pas JS)
+│   ├── sitemap.js          Plan du site, tenu à jour d'après la base
+│   └── _partage.js         Outils communs aux deux
 ├── js/
 │   ├── config.js           ⚙️ Configuration centrale (WhatsApp, textes…)
-│   ├── products.js         ⚙️ Produits + table de correspondance images
+│   ├── products.js         ⚙️ Produits — catalogue de secours
 │   ├── icons.js            Jeu de 41 icônes vectorielles (sprite SVG)
+│   ├── valider.js          Contrôle tout ce qui arrive de la base
+│   ├── store.js            Choisit la source des données (voir ci-dessous)
 │   ├── whatsapp.js         Messages et liens wa.me (partagés)
 │   ├── cart.js             Panier (localStorage)
 │   ├── ui.js               UI partagée (header, tiroir panier, toasts…)
 │   ├── home.js             Accueil (filtres, recherche, galerie)
 │   ├── product.js          Fiche produit
-│   └── checkout.js         Tunnel de commande + message WhatsApp
+│   └── checkout.js         Page de commande + message WhatsApp
 ├── assets/img/             Images optimisées pour le web (JPEG)
+├── assets/fonts/           Polices auto-hébergées (voir son README.md)
 ├── produits/               🔒 Photos produits ORIGINALES (non modifiées)
 ├── lifestyle produit/      🔒 Photos lifestyle ORIGINALES (non modifiées)
 ├── archive/                🔒 Anciennes images (non utilisées)
@@ -190,7 +198,10 @@ par ligne.
 - Panier : tiroir accessible partout, quantités, suppression, vidage,
   totaux (gérant les prix non renseignés), persistance localStorage,
   deux options différentes = deux lignes distinctes, compteur animé ;
-- Tunnel en 3 étapes avec validation des champs et messages d'erreur clairs ;
+- Page de commande en un écran : panier modifiable, formulaire **facultatif**
+  (nom, zone, date, remarque) qui enrichit le message s'il est rempli, et
+  aperçu du message avant envoi. Seul le téléphone est vérifié, et seulement
+  s'il est saisi ;
 - Message WhatsApp formaté (n° de commande, produits, options, quantités,
   totaux, coordonnées, date/heure, mode de récupération, remarque) et
   correctement encodé dans l'URL `wa.me` ;
@@ -205,25 +216,79 @@ par ligne.
   catégorie/recherche sans résultat, image manquante (fallback), numéro
   WhatsApp non configuré, hors connexion (avertissement à l'envoi).
 
-## Reste à configurer (données réelles, jamais inventées)
+## D'où viennent les données affichées
 
-1. **Prix** de chaque produit (`js/products.js`) — seul réglage bloquant restant ;
-2. Horaires, réseaux sociaux, vrais témoignages (`js/config.js`) ;
-3. Image lifestyle du « Gâteau au chocolat » + noms à confirmer → voir `ASSETS_A_VERIFIER.md` ;
-4. Coordonnées de l'éditeur dans `mentions-legales.html`.
+Le site sait fonctionner avec trois sources, de la plus fraîche à la plus sûre.
+Il n'attend jamais le réseau pour s'afficher : il part de la meilleure source
+déjà disponible, puis se met à jour en silence quand la base répond.
+
+| Ordre | Source | Quand elle sert |
+|---|---|---|
+| 1 | **Supabase** | Dès que la base répond. C'est ce que modifie le dashboard. |
+| 2 | **Cache local** | Au chargement de la page : la dernière réponse valide de la base, conservée dans le navigateur du visiteur. C'est elle qui préserve les vrais prix quand la base est en pause. |
+| 3 | **`js/products.js` et `js/config.js`** | Filet de dernier recours, à la toute première visite si la base ne répond pas. |
+
+> Les prix et les textes se modifient **depuis le dashboard**, pas dans les
+> fichiers. `js/products.js` ne sert plus que de secours : il n'est pas
+> réécrit automatiquement, et ses prix restent volontairement vides.
+
+## Informations à fournir
+
+Ces éléments ne peuvent pas être devinés — ils doivent être communiqués par
+la propriétaire, puis reportés à l'endroit indiqué.
+
+1. **Mentions légales** (`mentions-legales.html`, un commentaire marque
+   l'emplacement exact) : identité de l'exploitante ou raison sociale,
+   adresse postale, numéro d'immatriculation s'il existe, adresse email de
+   contact, nom du responsable de la publication ;
+2. **Prix** de chaque produit — à saisir dans le dashboard, onglet Produits ;
+3. Horaires, réseaux sociaux et vrais témoignages — dashboard, onglets
+   *Contact & livraison* et *Témoignages* ;
+4. Image lifestyle du « Gâteau au chocolat » → voir `ASSETS_A_VERIFIER.md` ;
+5. Polices de la marque, facultatif → voir `assets/fonts/README.md`.
 
 ✅ Numéro WhatsApp de commande configuré : **+269 488 03 43**.
 
-## Résultats des tests (2026-07-25)
+## Sécurité — deux actions obligatoires côté Supabase
 
-Testé en local dans Chrome (voir détail dans `CHANGELOG_ZAIDAT_FOOD.md`) :
-navigation, filtres, recherche, les 14 produits et leurs images vérifiées une à
-une (aucune inversion produit/lifestyle), panier complet, persistance,
-tunnel de commande, validation des formulaires, message WhatsApp encodé/décodé,
-états vides et d'erreur, absence de débordement horizontal, console sans
-aucune erreur ni avertissement.
+Le dashboard écrit dans Supabase. Sans les deux réglages ci-dessous,
+n'importe qui pourrait modifier vos prix et détourner vos commandes.
 
-Point d'attention : les largeurs exactes 360 px et ≥ 1280 px n'ont pas pu être
-émulées dans l'environnement de test (panneau non affiché) — la CSS est fluide
-et vérifiée à 666-729 px ; un contrôle visuel rapide sur vrai téléphone et
-grand écran est recommandé avant mise en ligne.
+1. Relancer **en entier** `admin/supabase-installation.sql` dans le SQL Editor,
+   puis déclarer la personne autorisée :
+   `select zf_admin.promouvoir_administrateur('son@email');`
+2. **Fermer l'inscription libre** : Supabase → Authentication →
+   Sign In / Providers → Email → décocher *Allow new users to sign up*.
+
+Le détail est dans `admin/GUIDE_DASHBOARD.md`.
+
+## Résultats des tests (2026-09-08)
+
+**258 vérifications automatisées, toutes au vert**, plus les tests de sécurité
+exécutés sur un vrai PostgreSQL 16.
+
+| Batterie | Vérifications | Ce qu'elle couvre |
+|---|---|---|
+| Contrôles statiques | 28 | Syntaxe JS/CSS/JSON/SQL, absence d'anciennes règles de sécurité, absence de dépendance Google, absence de secret, intégrité du catalogue et du numéro officiel |
+| Validation des données | 40 | `javascript:`, `data:`, protocoles déguisés, numéro WhatsApp invalide, produits malformés |
+| Partage social et sitemap | 26 | Les 14 fiches vues comme un robot WhatsApp, sans JavaScript |
+| Fiabilité et cache | 23 | Vignettes 450 px, chargement non bloquant, cache, pages légales |
+| Interface et accessibilité | 20 | 320 / 360 / 390 / 1440 px, cibles tactiles, débordements |
+| Parcours de commande | 80 | Accueil → filtre → recherche → fiche → option → panier → commande → lien `wa.me`, dans les trois états de la base |
+| Dashboard | 41 | Autorisation, mode consultation, conflit, nettoyage des photos, mobile, textes éditables |
+
+Sécurité de la base, testée sur PostgreSQL 16 avec les rôles Supabase reproduits
+(`anon`, `authenticated`, `auth.uid()`, `storage.objects`) :
+
+- **visiteur anonyme** — lecture autorisée, toute écriture refusée ;
+- **compte créé librement, non administrateur** — ne peut ni modifier un prix,
+  ni détourner le numéro WhatsApp, ni s'ajouter comme administrateur, ni
+  appeler l'outil de promotion, ni voir la liste des administrateurs ;
+- **administratrice déclarée** — écriture autorisée ; dépôt de photos accepté
+  dans les trois dossiers prévus, refusé partout ailleurs (`../`, extension
+  non-image, autre espace de stockage) ;
+- **migration** — relancée quatre fois de suite sans erreur, produits, réglages,
+  photos et comptes intacts à chaque passage.
+
+Le seul point non vérifiable hors ligne est le réglage d'inscription Supabase :
+voir la section « Sécurité » plus haut.

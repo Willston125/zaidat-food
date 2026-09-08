@@ -1,0 +1,63 @@
+/* =========================================================
+   ZAIDAT FOOD — Polices du site
+   ---------------------------------------------------------
+   Le site ne charge plus les polices depuis Google Fonts.
+
+   POURQUOI : cette feuille de style distante bloquait l'affichage
+   de la page entière. Quand le domaine de Google répondait mal —
+   ce qui arrive sur une connexion mobile chargée, derrière un
+   filtre d'entreprise ou dans un pays où il est ralenti — la page
+   restait blanche plusieurs secondes (12,7 s mesurées lors de
+   l'audit). Elle transmettait aussi l'adresse IP de chaque
+   visiteur à un tiers, ce que la politique de confidentialité du
+   site ne mentionnait pas.
+
+   AUJOURD'HUI : le site utilise une pile de polices système
+   cohérente, déjà présente sur l'appareil du visiteur. Rien à
+   télécharger, affichage instantané, aucune donnée transmise.
+
+   POUR RETROUVER LES POLICES DE LA MARQUE (Fraunces et Nunito
+   Sans) : déposer les quatre fichiers .woff2 dans ce dossier,
+   puis retirer les marqueurs de commentaire du bloc ci-dessous.
+   La marche à suivre complète est dans assets/fonts/README.md.
+   Aucune autre modification n'est nécessaire : les règles
+   `font-family` du site nomment déjà « Fraunces » et « Nunito
+   Sans » en tête de pile, et prennent le relais dès que les
+   fichiers sont là.
+   ========================================================= */
+
+/* ----- Décommenter à partir d'ici une fois les .woff2 déposés -----
+
+@font-face {
+  font-family: "Fraunces";
+  src: url("fraunces-600.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Fraunces";
+  src: url("fraunces-700.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Nunito Sans";
+  src: url("nunito-sans-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Nunito Sans";
+  src: url("nunito-sans-700.woff2") format("woff2");
+  font-weight: 700 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+----- Fin du bloc à décommenter ----- */
