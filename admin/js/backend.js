@@ -94,6 +94,25 @@ window.BACK = (function () {
     };
   }
 
+  /* Une ligne est-elle deja identique en base ?
+     Sans cette comparaison, enregistrer un seul prix reecrivait les
+     vingt-et-un produits : vingt-et-un allers-retours reseau, plus de
+     quinze secondes d'attente sur une connexion mobile, et autant
+     d'occasions qu'un echec interrompe l'enregistrement en cours de
+     route. On ne compare que les champs qu'on ecrit. */
+  function memeLigne(existant, nouvelle) {
+    if (!existant) return false;
+    return Object.keys(nouvelle).every(function (cle) {
+      var a = existant[cle], b = nouvelle[cle];
+      if (a === b) return true;
+      if (a === null || a === undefined) return b === null || b === undefined || b === "";
+      if (typeof a === "object" || typeof b === "object") {
+        return JSON.stringify(a) === JSON.stringify(b);
+      }
+      return false;
+    });
+  }
+
   /* ---------- Lecture ---------- */
 
   /* Catalogue livré avec le site : point de départ quand la base est
@@ -361,6 +380,8 @@ window.BACK = (function () {
             avance(++fait, total, p.name);
             var ligne = versLigne(p, i);
             var ancien = parSlug[p.slug];
+            /* Produit inchange : rien a ecrire. */
+            if (ancien && memeLigne(ancien, ligne)) return null;
             return ancien ? SB.majProduit(ancien.id, ligne) : SB.creerProduit(ligne);
           });
         });
