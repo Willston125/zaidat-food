@@ -3,7 +3,7 @@
 Le dashboard permet de gérer tout le site sans toucher au code :
 produits, prix, photos, textes, horaires, numéro WhatsApp.
 
-**Adresse du dashboard :** `votre-site.vercel.app/admin/`
+**Adresse du dashboard :** `zaidatfood.online/admin/`
 
 ---
 

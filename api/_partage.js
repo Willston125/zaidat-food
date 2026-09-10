@@ -30,7 +30,7 @@ function origine(req) {
   }
   const hote =
     (req && req.headers && (req.headers["x-forwarded-host"] || req.headers.host)) ||
-    "zaidat-food.vercel.app";
+    "zaidatfood.online";
   const protocole =
     (req && req.headers && req.headers["x-forwarded-proto"]) ||
     (/^localhost|^127\./.test(hote) ? "http" : "https");

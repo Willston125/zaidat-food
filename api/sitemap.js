@@ -26,7 +26,7 @@ module.exports = async function handler(req, res) {
   }
 
   const entrees = [
-    { loc: base + "/index.html", priorite: "1.0", frequence: "weekly" },
+    { loc: base + "/", priorite: "1.0", frequence: "weekly" },
   ];
 
   produits
