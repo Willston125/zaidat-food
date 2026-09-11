@@ -8,7 +8,13 @@
        la vraie description et la vraie photo du produit demandé.
        Indispensable : les robots de WhatsApp et de Facebook
        n'exécutent pas le JavaScript de la page. Les valeurs
-       ci-dessous ne s'affichent que si la fonction est indisponible. -->
+       ci-dessous ne s'affichent que si la fonction est indisponible.
+
+       Ce fichier ne s'appelle PAS produit.html : sur Vercel, un fichier
+       présent à l'adresse demandée est servi AVANT toute réécriture.
+       Nommé produit.html, il court-circuitait la fonction, et les
+       robots recevaient ce gabarit générique, sans photo. -->
+  <meta name="robots" content="noindex, follow">
   <title>Produit — ZAIDAT FOOD</title>
   <meta name="description" content="Découvrez ce produit fait maison par ZAIDAT FOOD et ajoutez-le à votre panier.">
   <meta property="og:type" content="product">

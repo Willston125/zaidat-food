@@ -147,7 +147,7 @@ function canonical(html) {
       if (m >= 0xC0 && m <= 0xCF && m !== 0xC4 && m !== 0xC8 && m !== 0xCC) { dims = [buf.readUInt16BE(i+7), buf.readUInt16BE(i+5)]; break; }
       i += 2 + buf.readUInt16BE(i+2); }
     tv('1200 x 630 pixels', dims && dims[0] === 1200 && dims[1] === 630, JSON.stringify(dims));
-    for (const page of ['index.html','produit.html','commande.html','mentions-legales.html','confidentialite.html']) {
+    for (const page of ['index.html','gabarit-produit.html','commande.html','mentions-legales.html','confidentialite.html']) {
       const html = fs.readFileSync(path.join(RACINE, page), 'utf8');
       tv(page + ' : og:image absolue + dimensions',
          /property="og:image" content="https:\/\//.test(html) && /og:image:width/.test(html) && /og:image:height/.test(html));

@@ -142,7 +142,7 @@ function tousLesProduits(limite) {
     .catch(() => produitsDeSecours());
 }
 
-/* Lit un fichier statique du projet (produit.html…).
+/* Lit un fichier statique du projet (gabarit-produit.html…).
    `includeFiles` dans vercel.json garantit sa présence à côté de
    la fonction déployée. */
 function lireFichierStatique(nom) {

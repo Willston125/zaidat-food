@@ -4,7 +4,7 @@
   "trailingSlash": false,
   "functions": {
     "api/produit.js": {
-      "includeFiles": "{produit.html,js/**}"
+      "includeFiles": "{gabarit-produit.html,js/**}"
     },
     "api/sitemap.js": {
       "includeFiles": "js/**"
@@ -13,23 +13,11 @@
   "rewrites": [
     {
       "source": "/produit.html",
-      "destination": "/api/produit",
-      "missing": [
-        {
-          "type": "query",
-          "key": "__raw"
-        }
-      ]
+      "destination": "/api/produit"
     },
     {
       "source": "/produit",
-      "destination": "/api/produit",
-      "missing": [
-        {
-          "type": "query",
-          "key": "__raw"
-        }
-      ]
+      "destination": "/api/produit"
     },
     {
       "source": "/sitemap.xml",

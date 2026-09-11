@@ -1,7 +1,7 @@
 /* =========================================================
    ZAIDAT FOOD — Fiche produit servie avec ses vraies métadonnées
    ---------------------------------------------------------
-   Sert exactement la même page que produit.html, mais avec le
+   Sert exactement la même page que gabarit-produit.html, mais avec le
    titre, la description, la photo et l'adresse canonique du
    produit demandé déjà écrits dans le HTML.
 
@@ -128,13 +128,13 @@ module.exports = async function handler(req, res) {
 
   let gabarit;
   try {
-    gabarit = P.lireFichierStatique("produit.html");
+    gabarit = P.lireFichierStatique("gabarit-produit.html");
   } catch (e) {
     /* Le gabarit n'a pas pu être lu. Plutôt qu'une erreur, on renvoie
-       le visiteur vers la page statique, servie directement par le
-       CDN grâce au paramètre qui désactive cette réécriture. */
+       le visiteur vers le gabarit statique, servi directement par le
+       CDN : la page se remplit alors côté navigateur, comme avant. */
     res.statusCode = 302;
-    res.setHeader("Location", "/produit.html?__raw=1" + (slug ? "&p=" + encodeURIComponent(slug) : ""));
+    res.setHeader("Location", "/gabarit-produit.html" + (slug ? "?p=" + encodeURIComponent(slug) : ""));
     res.end();
     return;
   }

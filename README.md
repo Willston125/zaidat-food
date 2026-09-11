@@ -136,7 +136,8 @@ par ligne.
 
 ```
 ├── index.html              Accueil (hero, catégories, menu, sections)
-├── produit.html            Fiche produit (?p=slug — URL partageable)
+├── gabarit-produit.html    Fiche produit : gabarit rempli par api/produit.js,
+│                           servi à l'adresse produit.html?p=slug
 ├── commande.html           Panier + commande WhatsApp (formulaire facultatif)
 ├── mentions-legales.html   Page légale minimale
 ├── confidentialite.html    Politique de confidentialité
