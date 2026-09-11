@@ -292,3 +292,5 @@ Sécurité de la base, testée sur PostgreSQL 16 avec les rôles Supabase reprod
 
 Le seul point non vérifiable hors ligne est le réglage d'inscription Supabase :
 voir la section « Sécurité » plus haut.
+
+
