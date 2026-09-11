@@ -113,7 +113,7 @@ class V(HTMLParser):
             s.err.append('%s ferme hors ordre' % t)
             while s.pile and s.pile.pop()!=t: pass
 mauvais = False
-for f in ['index.html','produit.html','commande.html','mentions-legales.html',
+for f in ['index.html','gabarit-produit.html','commande.html','mentions-legales.html',
           'confidentialite.html','admin/index.html']:
     v=V(); v.feed(open(f,encoding='utf-8').read())
     reste=[t for t in v.pile if t!='svg']
@@ -124,7 +124,7 @@ PY
 python3 - <<'PY' && verdict 0 "aucun identifiant HTML duplique" || verdict 1 "identifiants dupliques"
 import re,sys,collections
 mauvais=False
-for f in ['index.html','produit.html','commande.html','mentions-legales.html',
+for f in ['index.html','gabarit-produit.html','commande.html','mentions-legales.html',
           'confidentialite.html','admin/index.html']:
     ids=re.findall(r'\sid="([^"]+)"', open(f,encoding='utf-8').read())
     d=[k for k,v in collections.Counter(ids).items() if v>1]

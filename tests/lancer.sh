@@ -24,7 +24,7 @@ notre_serveur=""
 if curl -s -o /dev/null -m 2 "$BASE/index.html" 2>/dev/null; then
   echo "${GRIS}Serveur deja en ecoute sur $BASE${RAZ}"
 else
-  python3 -m http.server "$PORT" --bind 127.0.0.1 >/dev/null 2>&1 &
+  ZF_PORT="$PORT" node tests/outils/serveur.js >/dev/null 2>&1 &
   notre_serveur=$!
   for _ in $(seq 1 20); do
     curl -s -o /dev/null -m 1 "$BASE/index.html" 2>/dev/null && break
