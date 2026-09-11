@@ -232,7 +232,11 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0 0 0.5em; line-height: 1
 }
 .adm-tiroir__tete { border-bottom: 1px solid var(--bord); }
 .adm-tiroir__tete h2 { margin: 0; font-size: 1.1rem; }
-.adm-tiroir__pied { border-top: 1px solid var(--bord); justify-content: flex-end; }
+.adm-tiroir__pied { border-top: 1px solid var(--bord); justify-content: flex-end; flex-wrap: wrap; }
+.tiroir-erreur {
+  flex: 1 1 100%; margin: 0; color: var(--danger); font-weight: 700; font-size: 0.88rem;
+}
+.tiroir-erreur ul { margin: 0.2rem 0 0; padding-left: 1.1rem; font-weight: 600; }
 .adm-tiroir__corps { flex: 1; overflow-y: auto; padding: 1.2rem; }
 
 /* ---------- Modale ---------- */

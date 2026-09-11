@@ -408,6 +408,7 @@
 
   function ouvrirEditeur(index) {
     editionIndex = index;
+    montrerErreursProduit([]);
     brouillon = index === null ? produitVierge() : JSON.parse(JSON.stringify(D.produits[index]));
     $("#tiroir-titre").textContent = index === null ? "Nouveau produit" : "Modifier : " + brouillon.name;
     $("#tiroir-corps").innerHTML = formulaireProduit(brouillon);
@@ -491,8 +492,11 @@
       '<div class="bloc"><h3>Photos</h3>' +
       '<p class="bloc__note">Les photos sont recadrées en carré, puis enregistrées en deux tailles (900 px et 450 px) automatiquement.</p>' +
       '<div class="photos-duo">' +
-      slotPhoto("produit", "Photo du produit", "Le plat seul, bien visible. C'est l'image de la carte du menu.", p.productImage) +
-      slotPhoto("lifestyle", "Photo en situation", "La cuisinière avec ce même produit. Elle apparaît sur la fiche, sous la photo principale.", p.lifestyleImage) +
+      slotPhoto("produit", "Photo du produit (obligatoire)",
+                "Le plat seul, bien visible. C'est l'image de la carte du menu. " +
+                "Renseignez d'abord le nom du produit : la photo est rangee sous ce nom.", p.productImage) +
+      slotPhoto("lifestyle", "Photo en situation (facultative)",
+                "La cuisinière avec ce même produit. Elle apparaît sur la fiche, sous la photo principale.", p.lifestyleImage) +
       "</div></div>" +
 
       '<div class="bloc"><h3>Options de commande</h3>' +
@@ -728,6 +732,16 @@
   }
 
   /* ---------- Enregistrement du produit ---------- */
+  /* Liste, de facon persistante, ce qui empeche de valider la fiche. */
+  function montrerErreursProduit(erreurs) {
+    var zone = $("#err-produit");
+    if (!zone) return;
+    if (!erreurs.length) { zone.hidden = true; zone.innerHTML = ""; return; }
+    zone.innerHTML = "Pour valider cette fiche, il manque :<ul>" +
+      erreurs.map(function (e) { return "<li>" + esc(e) + "</li>"; }).join("") + "</ul>";
+    zone.hidden = false;
+  }
+
   function validerProduit() {
     var erreurs = [];
     if (!brouillon.name.trim()) erreurs.push("Le nom est obligatoire.");
@@ -740,7 +754,12 @@
     });
     if (conflit) erreurs.push("Cette adresse de fiche est déjà utilisée par un autre produit.");
 
-    if (erreurs.length) { toast(erreurs[0], true); return false; }
+    if (erreurs.length) {
+      montrerErreursProduit(erreurs);
+      toast(erreurs[0], true);
+      return false;
+    }
+    montrerErreursProduit([]);
 
     brouillon.currency = D.config.currency || "KMF";
     if (!brouillon.id) brouillon.id = "p-" + brouillon.slug;
@@ -813,20 +832,31 @@
       var i = parseInt(ligne.getAttribute("data-index"), 10);
 
       $all("[data-champ]", ligne).forEach(function (input) {
-        input.addEventListener("change", function () {
-          var champ = input.getAttribute("data-champ");
+        var champ = input.getAttribute("data-champ");
+
+        /* `reecrire` : faut-il remettre au propre le contenu du champ ?
+           On ne le fait qu'à la sortie du champ. Normaliser à chaque
+           frappe empêcherait de taper une espace dans l'identifiant. */
+        function appliquer(reecrire) {
           if (champ === "id") {
             var ancien = D.categories[i].id;
             var nouveau = versSlug(input.value) || ancien;
             /* Les produits suivent le renommage */
             D.produits.forEach(function (p) { if (p.category === ancien) p.category = nouveau; });
             D.categories[i].id = nouveau;
-            input.value = nouveau;
+            if (reecrire) input.value = nouveau;
           } else {
             D.categories[i][champ] = input.value;
           }
           majEtat();
-        });
+        }
+
+        /* « input » et pas seulement « change » : sans lui, un nom de
+           catégorie tapé au clavier restait invisible pour le dashboard,
+           qui gardait « Tout est enregistré » et laissait le bouton
+           Enregistrer grisé. Tous les autres écrans écoutent « input ». */
+        input.addEventListener("input", function () { appliquer(false); });
+        input.addEventListener("change", function () { appliquer(true); });
       });
 
       ligne.addEventListener("click", function (e) {

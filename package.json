@@ -1,0 +1,12 @@
+{
+  "name": "zaidat-food",
+  "private": true,
+  "description": "Site ZAIDAT FOOD — site statique, sans etape de construction. Ce fichier ne sert qu'aux tests.",
+  "scripts": {
+    "test": "bash tests/lancer.sh",
+    "test:statique": "bash tests/statique.sh"
+  },
+  "devDependencies": {
+    "playwright": "^1.63.0"
+  }
+}

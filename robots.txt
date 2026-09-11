@@ -9,4 +9,4 @@ Disallow: /confidentialite.html
 
 # Le plan du site est produit à la demande par api/sitemap.js : il
 # suit automatiquement les produits ajoutés depuis le dashboard.
-Sitemap: https://zaidat-food.vercel.app/sitemap.xml
+Sitemap: https://zaidatfood.online/sitemap.xml
