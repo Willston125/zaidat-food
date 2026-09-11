@@ -37,6 +37,10 @@ function couperA(texte, longueur) {
   return t.slice(0, longueur - 1).replace(/\s+\S*$/, "") + "…";
 }
 
+/* Image de partage de l'accueil et de secours : 1200 × 630, le format
+   attendu par WhatsApp, Facebook et LinkedIn pour un aperçu en grand. */
+const IMAGE_PARTAGE = "/assets/img/partage-1200x630.jpg";
+
 function baliseMeta(produit, base, slug) {
   const esc = P.esc;
   const url = base + "/produit.html?p=" + encodeURIComponent(slug);
@@ -54,9 +58,13 @@ function baliseMeta(produit, base, slug) {
       '  <meta property="og:title" content="ZAIDAT FOOD — Cuisine artisanale comorienne">',
       '  <meta property="og:description" content="' + esc(DESCRIPTION_PAR_DEFAUT) + '">',
       '  <meta property="og:url" content="' + esc(base + "/index.html") + '">',
-      '  <meta property="og:image" content="' + esc(base + "/assets/img/hero-1672.jpg") + '">',
+      '  <meta property="og:image" content="' + esc(base + IMAGE_PARTAGE) + '">',
+      '  <meta property="og:image:type" content="image/jpeg">',
+      '  <meta property="og:image:width" content="1200">',
+      '  <meta property="og:image:height" content="630">',
       '  <meta property="og:locale" content="fr_FR">',
       '  <meta name="twitter:card" content="summary_large_image">',
+      '  <meta name="twitter:image" content="' + esc(base + IMAGE_PARTAGE) + '">',
     ].join("\n");
   }
 
@@ -68,10 +76,16 @@ function baliseMeta(produit, base, slug) {
 
   /* La photo en situation donne un aperçu bien plus appétissant que
      le produit seul : c'est elle qu'on met en avant au partage. */
-  const image =
+  const photo =
     P.imageAbsolue(produit.image_lifestyle, base) ||
-    P.imageAbsolue(produit.image_produit, base) ||
-    base + "/assets/img/hero-1672.jpg";
+    P.imageAbsolue(produit.image_produit, base);
+  const image = photo || base + IMAGE_PARTAGE;
+  /* Les photos passent toutes par le recadrage du dashboard (ou par la
+     préparation des fichiers livrés) : elles font 900 × 900. Annoncer
+     la taille évite aux robots un premier partage sans image, le temps
+     qu'ils la téléchargent. */
+  const largeur = photo ? 900 : 1200;
+  const hauteur = photo ? 900 : 630;
 
   const lignes = [
     "  <title>" + esc(titre) + "</title>",
@@ -83,6 +97,10 @@ function baliseMeta(produit, base, slug) {
     '  <meta property="og:description" content="' + esc(description) + '">',
     '  <meta property="og:url" content="' + esc(url) + '">',
     '  <meta property="og:image" content="' + esc(image) + '">',
+    '  <meta property="og:image:secure_url" content="' + esc(image) + '">',
+    '  <meta property="og:image:type" content="image/jpeg">',
+    '  <meta property="og:image:width" content="' + largeur + '">',
+    '  <meta property="og:image:height" content="' + hauteur + '">',
     '  <meta property="og:image:alt" content="' + esc(nom + " — ZAIDAT FOOD") + '">',
     '  <meta property="og:locale" content="fr_FR">',
     '  <meta name="twitter:card" content="summary_large_image">',

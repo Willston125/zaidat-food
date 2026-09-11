@@ -129,7 +129,35 @@ function canonical(html) {
     tv('guillemets et chevrons echappes', h.includes('&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;'));
     tv('aucun chevron brut dans un attribut content', !/content="[^"]*<[^"]*"/.test(h));
     tv('image javascript: refusee, repli utilise',
-       /^https:\/\/zaidat-food\.vercel\.app\/assets\//.test(meta(h, 'og:image') || ''), meta(h, 'og:image'));
+       /\/assets\/img\/partage-1200x630\.jpg$/.test(meta(h, 'og:image') || ''), meta(h, 'og:image'));
+    tv('repli annonce en 1200 x 630', meta(h, 'og:image:width') === '1200' && meta(h, 'og:image:height') === '630');
+  }
+
+  // --- L'image de partage : le format que les robots attendent ---
+  {
+    const fs = require('fs'), path = require('path');
+    const f = path.join(RACINE, 'assets/img/partage-1200x630.jpg');
+    console.log('\n-- image de partage --');
+    tv('le fichier existe', fs.existsSync(f));
+    const octets = fs.existsSync(f) ? fs.statSync(f).size : 0;
+    tv('moins de 300 Ko (limite WhatsApp)', octets > 0 && octets < 300 * 1024, Math.round(octets / 1024) + ' Ko');
+    /* Dimensions lues dans l'en-tete JPEG (segment SOF) */
+    const buf = fs.readFileSync(f); let i = 2, dims = null;
+    while (i < buf.length) { if (buf[i] !== 0xFF) break; const m = buf[i+1];
+      if (m >= 0xC0 && m <= 0xCF && m !== 0xC4 && m !== 0xC8 && m !== 0xCC) { dims = [buf.readUInt16BE(i+7), buf.readUInt16BE(i+5)]; break; }
+      i += 2 + buf.readUInt16BE(i+2); }
+    tv('1200 x 630 pixels', dims && dims[0] === 1200 && dims[1] === 630, JSON.stringify(dims));
+    for (const page of ['index.html','produit.html','commande.html','mentions-legales.html','confidentialite.html']) {
+      const html = fs.readFileSync(path.join(RACINE, page), 'utf8');
+      tv(page + ' : og:image absolue + dimensions',
+         /property="og:image" content="https:\/\//.test(html) && /og:image:width/.test(html) && /og:image:height/.test(html));
+    }
+    global.fetch = () => Promise.reject(new Error('hors ligne'));   /* catalogue livre avec le site */
+    const res = fausseReponse();
+    await handlerProduit(requete('/produit.html?p=samoussas'), res);
+    tv('fiche produit : dimensions annoncees (900 x 900)',
+       meta(res.corps, 'og:image:width') === '900' && meta(res.corps, 'og:image:height') === '900');
+    tv('fiche produit : twitter:image = og:image', meta(res.corps, 'twitter:image') === meta(res.corps, 'og:image'));
   }
 
   // --- Domaine deduit de la requete ---
