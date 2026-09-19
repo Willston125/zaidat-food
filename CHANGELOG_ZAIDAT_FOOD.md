@@ -1,5 +1,52 @@
 # CHANGELOG — ZAIDAT FOOD
 
+## 2026-09-19 — Affiche d'annonce, partage, et nom de domaine
+
+### Affiche d'annonce
+
+- **Une affiche verticale publiable depuis le tableau de bord**, au format
+  d'une story Instagram, montrée à l'arrivée sur le site : gâteaux de l'Aïd,
+  fermeture exceptionnelle, nouveauté. Nouvel onglet **Affiche**.
+- Trois règles la rendent supportable, et elles comptent autant que
+  l'affichage : **une seule fois par visiteur** (la revoir à chaque page
+  ferait fuir quelqu'un qui consulte le menu), **jamais sur la page du
+  panier** (on n'interrompt pas une commande en cours), et une **date de fin
+  tenue par le site** — sans elle, l'annonce de l'Aïd resterait affichée en
+  novembre.
+- Fermeture à la croix (44 px), à la touche Échap ou en cliquant à côté ; le
+  clavier reste dans la boîte tant qu'elle est ouverte et le focus revient
+  d'où il venait. La fermeture automatique existe mais reste désactivée par
+  défaut, et annonce son décompte.
+- Le recadreur, jusque-là figé en carré, accepte désormais un format. Les
+  affiches sortent en 1080 × 1920 et 540 × 960, dans un dossier `affiches`
+  que la règle SQL du stockage autorise.
+- Corrigé en cours de route : quand les données fraîches arrivaient vite,
+  l'affiche surgissait au bout de 200 ms, par-dessus une page encore en train
+  de se dessiner.
+
+### Partage sur WhatsApp et Facebook
+
+- **La fonction qui remplit les fiches n'était jamais appelée** : sur Vercel,
+  un fichier présent à l'adresse demandée est servi avant toute réécriture, et
+  `produit.html` existait. Le gabarit s'appelle désormais
+  `gabarit-produit.html` ; les fiches partagées portent enfin leur titre, leur
+  photo et leur prix.
+- **Image de partage dédiée** en 1200 × 630, le format d'un aperçu en grand,
+  avec ses dimensions annoncées — sans quoi le premier partage d'un lien
+  arrive souvent sans image. Les pages panier, mentions légales et
+  confidentialité n'avaient aucune balise de partage.
+
+### Nom de domaine
+
+- Passage à **zaidatfood.online**. L'adresse ne figurait en dur qu'à trois
+  endroits ; partout ailleurs elle est déduite de la requête.
+
+### Tests
+
+- La suite entre dans le dépôt et se lance par `npm test` : 439 vérifications,
+  dont le parcours complet du tableau de bord dans un vrai navigateur.
+
+
 ## 2026-09-08 — Correction des 22 constats de l'audit technique
 
 ### Sécurité
