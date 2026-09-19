@@ -118,6 +118,44 @@ async function lireStockage(p) {
     await c.close();
   }
 
+  /* ---------- 4. Deux onglets ouverts sur le meme dashboard ----------
+     Ils partagent le stockage du navigateur, donc le meme jeton, mais
+     chacun a son propre code : le garde-fou d'un onglet n'aide pas
+     l'autre. Les deux partent avec « r0 », un seul peut l'utiliser —
+     et celui qui se fait refuser ne doit pas deconnecter les deux. */
+  {
+    const etat = A.etatNeuf({ auth: A.authNeuve({ delai: 800 }) });
+    const { c, erreurs } = await A.ouvrir(b, etat);
+    await c.addInitScript((s) => {
+      try { localStorage.setItem('zaidat_session_v1', s); } catch (e) {}
+    }, sessionStockee(A.jeton(-60), 'r0'));
+
+    const p1 = await c.newPage();
+    const p2 = await c.newPage();
+    await Promise.all([
+      p1.goto(A.BASE + '/admin/index.html', { waitUntil: 'load' }),
+      p2.goto(A.BASE + '/admin/index.html', { waitUntil: 'load' }),
+    ]);
+    await p1.waitForTimeout(6000);
+
+    A.tv('les deux onglets ont bien tente de renouveler',
+         etat.auth.appels === 2, etat.auth.appels + ' appel(s)');
+    A.tv('l un des deux s est fait refuser', etat.auth.refus === 1, etat.auth.refus + ' refus');
+
+    const sess = await lireStockage(p1);
+    A.tv('LES DEUX ONGLETS RESTENT CONNECTES', !!(sess && sess.access_token),
+         JSON.stringify(sess && sess.refresh_token));
+    for (const [n, pg] of [['1', p1], ['2', p2]]) {
+      await pg.click('.adm-nav__item[data-vue="connexion"]');
+      await pg.waitForTimeout(400);
+      const texte = await pg.evaluate(() => document.querySelector('#adm-vue').innerText);
+      A.tv('onglet ' + n + ' : toujours reconnu', /Connectée et autorisée/.test(texte),
+           texte.split('\n').slice(0, 2).join(' / '));
+    }
+    A.tv('aucune erreur JavaScript (4)', erreurs.length === 0, erreurs.join(' | '));
+    await c.close();
+  }
+
   await b.close();
   process.exit(A.bilan('SESSION — conservation et coupures') ? 1 : 0);
 })();

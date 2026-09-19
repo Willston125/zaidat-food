@@ -113,9 +113,6 @@ window.SB = (function () {
      plus de deux minutes à la téléverser. */
   var MARGE_EXPIRATION = 300000;
 
-  /* Garantit un jeton encore valide AVANT d'envoyer quoi que ce soit.
-     Indispensable pour les photos : un envoi part en une seule fois,
-     et Supabase refuse un jeton périmé avec « exp claim check failed ». */
   /* Horodatage du dernier échec passager, et durée pendant laquelle
      on ne réessaie pas. Un enregistrement enchaîne des dizaines de
      requêtes : sans ce répit, chacune rejouerait la même panne et
@@ -123,6 +120,9 @@ window.SB = (function () {
   var echecRenouvellement = 0;
   var REPIT_ECHEC = 15000;
 
+  /* Garantit un jeton encore valide AVANT d'envoyer quoi que ce soit.
+     Indispensable pour les photos : un envoi part en une seule fois,
+     et Supabase refuse un jeton périmé avec « exp claim check failed ». */
   function assurerJetonValide() {
     if (!estConnecte()) return Promise.resolve();
     var expire = expirationJeton();
@@ -228,6 +228,14 @@ window.SB = (function () {
       .then(
         function (r) {
           if (r.ok) return r.json();
+          /* Le dashboard peut être ouvert dans deux onglets. Si l'autre
+             a renouvelé entre-temps, le jeton en mémoire n'est plus
+             celui qu'on vient de présenter : le refus ne dit rien de la
+             session, qui est bien vivante. On repart de la sienne. */
+          var courante = lireSession();
+          if (courante && courante.refresh_token && courante.refresh_token !== jeton) {
+            return courante;
+          }
           /* 400 et 401 : c'est le jeton qui est rejeté. Tout le reste
              (429, 500, 502, 504…) est passager. */
           throw erreurSession(
@@ -244,12 +252,24 @@ window.SB = (function () {
         return d;
       })
       .catch(function (e) {
-        if (!e.sessionFinie && essaisRestants > 0) {
+        if (!e || essaisRestants <= 0) throw e;
+        if (!e.sessionFinie) {
           return attendre(1500).then(function () {
             return envoyerRenouvellement(jeton, essaisRestants - 1);
           });
         }
-        throw e;
+        /* Jeton refusé — mais peut-être par l'autre onglet, dont le
+           renouvellement est parti juste avant le nôtre et n'a pas
+           encore répondu. Sa réponse arrive dans la seconde et pose
+           le nouveau jeton : on lui laisse ce temps avant de conclure
+           qu'il faut se reconnecter. */
+        return attendre(1200).then(function () {
+          var courante = lireSession();
+          if (courante && courante.refresh_token && courante.refresh_token !== jeton) {
+            return courante;
+          }
+          throw e;
+        });
       });
   }
 

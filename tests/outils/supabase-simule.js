@@ -26,7 +26,7 @@ function jeton(secondes) {
 /* Etat d'authentification facultatif, a joindre a `etatNeuf` pour que
    le faux serveur applique la regle du jeton a usage unique. */
 function authNeuve(over = {}) {
-  return Object.assign({ courant: 'r0', appels: 0, refus: 0, forcer: null }, over);
+  return Object.assign({ courant: 'r0', appels: 0, refus: 0, forcer: null, delai: 0 }, over);
 }
 
 function ligne(i, extra = {}) {
@@ -70,6 +70,9 @@ function creerServeur(etat) {
                         error_description: 'Invalid Refresh Token: Already Used' }, 400);
         }
         a.courant = 'r' + a.appels;
+        /* `delai` retient la reponse : c'est ce qui permet de faire
+           partir deux onglets avec le meme jeton. */
+        if (a.delai) await new Promise(r => setTimeout(r, a.delai));
       }
       return json({ access_token: jeton(3600),
                     refresh_token: (a && a.courant) || 'r', user: { email: etat.email } });

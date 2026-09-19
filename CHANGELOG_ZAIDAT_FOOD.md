@@ -28,6 +28,12 @@ seul de produire « reconnectez-vous » au moment d'enregistrer une affiche.
 - La session est aussi gardée **en mémoire** quand le navigateur refuse son
   stockage (navigation privée, cookies tiers bloqués, quota plein). Elle ne
   survivra pas au rechargement, mais plus aux clics.
+- **Deux onglets ouverts sur le dashboard se déconnectaient l'un l'autre.**
+  Ils partagent le stockage du navigateur, donc le même jeton, mais chacun a
+  son propre code : le garde-fou d'un onglet n'aide pas l'autre. Celui qui se
+  faisait refuser effaçait la session des deux. Il vérifie maintenant si le
+  jeton a changé entre-temps, et laisse une seconde au renouvellement du
+  voisin pour arriver avant de conclure.
 - **Les anciennes affiches restaient dans le stockage.** Le nettoyage
   reconnaissait `produits`, `lifestyle` et `galerie`, mais pas `affiches` :
   chaque remplacement laissait un fichier de 1080 × 1920 derrière lui.
