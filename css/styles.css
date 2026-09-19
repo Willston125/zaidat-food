@@ -926,3 +926,66 @@ a { color: var(--terracotta-deep); }
 
 /* Boutons textuels du panier : mêmes 24 px minimum */
 .cart-line__remove, .cart-clear { min-height: 24px; }
+
+/* =========================================================
+   Affiche d'annonce (pop-up)
+   ---------------------------------------------------------
+   Format vertical, comme une story. Sur mobile elle occupe
+   presque tout l'écran ; sur grand écran elle reste étroite,
+   sinon une image verticale étirée devient illisible.
+   ========================================================= */
+.affiche {
+  position: fixed; inset: 0; z-index: 120;
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem;
+  opacity: 0; transition: opacity 220ms ease;
+}
+.affiche.est-visible { opacity: 1; }
+.affiche__voile { position: absolute; inset: 0; background: rgba(30, 18, 12, 0.72); }
+
+.affiche__boite {
+  position: relative;
+  width: min(340px, 88vw);
+  max-height: calc(100vh - 2rem);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.6);
+  transform: translateY(12px) scale(0.98);
+  transition: transform 260ms cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.affiche.est-visible .affiche__boite { transform: none; }
+
+.affiche__visuel { display: block; background: #2a1c14; }
+.affiche__image {
+  display: block; width: 100%; height: auto;
+  aspect-ratio: 1080 / 1920; object-fit: cover;
+}
+
+/* Cible tactile confortable, posee sur l'image donc doublement
+   contrastee : un rond sombre sous une croix claire. */
+.affiche__fermer {
+  position: absolute; top: 0.6rem; right: 0.6rem;
+  width: 44px; height: 44px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: 50%;
+  background: rgba(20, 12, 8, 0.6); color: #fff;
+  cursor: pointer; backdrop-filter: blur(4px);
+  transition: background 160ms ease;
+}
+.affiche__fermer:hover, .affiche__fermer:focus-visible { background: rgba(20, 12, 8, 0.85); }
+.affiche__fermer svg { width: 22px; height: 22px; }
+
+.affiche__compte {
+  position: absolute; left: 0; right: 0; bottom: 0; margin: 0;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.78rem; font-weight: 700; text-align: center; color: #fff;
+  background: linear-gradient(to top, rgba(20, 12, 8, 0.78), rgba(20, 12, 8, 0));
+}
+
+/* Le fond ne defile plus tant que l'affiche est ouverte. */
+body.a-affiche-ouverte { overflow: hidden; }
+
+@media (prefers-reduced-motion: reduce) {
+  .affiche, .affiche__boite { transition: none; }
+  .affiche__boite { transform: none; }
+}

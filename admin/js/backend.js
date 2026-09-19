@@ -297,6 +297,11 @@ window.BACK = (function () {
       if (g.url) urls[g.url] = true;
       if (g.urlPetite) urls[g.urlPetite] = true;
     });
+    var af = D.config && D.config.affiche;
+    if (af) {
+      if (af.image) urls[af.image] = true;
+      if (af.imagePetite) urls[af.imagePetite] = true;
+    }
     return urls;
   }
 
@@ -425,12 +430,20 @@ window.BACK = (function () {
       });
   }
 
+  /* Photos rangées dans les réglages plutôt que dans un produit :
+     la galerie, et l'affiche d'annonce. Sert à repérer celles qui
+     ont été remplacées, pour libérer le stockage. */
   function photosDeGalerie(config) {
     var urls = [];
     ((config && config.galerie) || []).forEach(function (g) {
       if (g.url) urls.push(g.url);
       if (g.urlPetite) urls.push(g.urlPetite);
     });
+    var a = config && config.affiche;
+    if (a) {
+      if (a.image) urls.push(a.image);
+      if (a.imagePetite) urls.push(a.imagePetite);
+    }
     return urls;
   }
 

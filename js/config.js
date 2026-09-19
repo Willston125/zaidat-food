@@ -133,6 +133,22 @@ const SITE_CONFIG = {
      photos en situation des produits.                        */
   galerie: [],
 
+  /* --- Affiche d'annonce ----------------------------------
+     Publiée depuis le dashboard, montrée une fois par visiteur
+     à l'arrivée sur le site. Vide = aucune affiche.
+     `finLe` est le dernier jour d'affichage (inclus) : passée
+     cette date le site l'éteint tout seul.
+     `fermetureAuto` en secondes, 0 = pas de fermeture auto.    */
+  affiche: {
+    actif: false,
+    image: "",
+    imagePetite: "",
+    alt: "",
+    lien: "",
+    finLe: "",
+    fermetureAuto: 0,
+  },
+
   /* --- Réseaux sociaux (laisser vide si inexistants) ------- */
   socials: {
     instagram: "",

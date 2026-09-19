@@ -235,7 +235,7 @@ returns boolean
 language sql
 immutable
 as $$
-  select nom ~ '^(produits|lifestyle|galerie)/[A-Za-z0-9][A-Za-z0-9._-]*\.(jpg|jpeg|png|webp)$'
+  select nom ~ '^(produits|lifestyle|galerie|affiches)/[A-Za-z0-9][A-Za-z0-9._-]*\.(jpg|jpeg|png|webp)$'
      and nom !~ '\.\.';
 $$;
 

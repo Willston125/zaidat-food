@@ -197,6 +197,45 @@ moyens de paiement, réseaux sociaux, devise.
 Onglet **Témoignages**. La section reste masquée sur le site tant
 qu'aucun témoignage n'est saisi — mieux vaut rien que de faux avis.
 
+### Publier une affiche d'annonce
+
+Onglet **Affiche**. Une annonce en grand, montrée à l'arrivée sur le
+site : gâteaux de l'Aïd, fermeture exceptionnelle, nouveau produit.
+
+1. **Choisir une affiche.** Format vertical, comme une story Instagram
+   (1080 × 1920). Une affiche préparée dans Canva ou sur le téléphone
+   convient ; le recadrage se fait dans le dashboard.
+2. **Écrire ce qu'elle dit**, dans « Que dit cette affiche ? ». Ce
+   texte est lu par les lecteurs d'écran et s'affiche si l'image ne
+   charge pas. Recopiez simplement le texte de l'affiche.
+3. **Mettre un dernier jour d'affichage.** Passé ce jour, l'affiche
+   disparaît toute seule. C'est le réglage le plus utile : sans lui,
+   l'annonce de l'Aïd est encore là en novembre.
+4. **Choisir où mène le clic**, dans la liste : un produit, le menu,
+   le panier, ou rien.
+5. **Enregistrer.**
+
+Trois choses que le site fait sans qu'on ait à y penser :
+
+- chaque visiteur ne la voit **qu'une fois**. Changer l'image ou le
+  texte en fait une nouvelle, que tout le monde reverra une fois ;
+- elle ne s'affiche **jamais sur la page du panier** : on n'interrompt
+  pas quelqu'un en train de commander ;
+- elle se ferme à la croix, à la touche Échap, ou en cliquant à côté.
+
+La « fermeture automatique » est facultative, et **Non** est le bon
+choix dans presque tous les cas : une affiche qui disparaît pendant
+qu'on la lit agace plus qu'elle n'aide.
+
+**Pour la revoir vous-même** après l'avoir fermée : ouvrez le site dans
+une fenêtre de navigation privée.
+
+> **Une seule chose à faire côté Supabase, la première fois :**
+> relancez `admin/supabase-installation.sql` en entier dans le SQL
+> Editor. Il autorise le dossier `affiches` dans le stockage des
+> photos — sans ça, l'envoi de l'affiche est refusé. Le script ne
+> détruit rien et peut être relancé autant de fois que nécessaire.
+
 ---
 
 ## Publier le site
