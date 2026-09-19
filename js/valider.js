@@ -126,6 +126,9 @@ window.ZFV = (function () {
         .filter(Boolean);
     }
 
+    /* --- Affiche --- */
+    if ("affiche" in config) config.affiche = nettoyerAffiche(config.affiche);
+
     /* --- Témoignages --- */
     if (Array.isArray(config.testimonials)) {
       config.testimonials = config.testimonials
@@ -148,6 +151,43 @@ window.ZFV = (function () {
       console.warn("ZAIDAT FOOD — données ignorées : " + refus.join(" ; "));
     }
     return config;
+  }
+
+  /* Nettoie l'affiche venue de la base. Renvoie null si elle n'est
+     pas exploitable : sans image il n'y a rien à montrer, et une
+     affiche à moitié valide vaut moins qu'une absence d'affiche. */
+  function nettoyerAffiche(a) {
+    if (!a || typeof a !== "object") return null;
+
+    var image = adresseImage(a.image);
+    if (!image) return null;
+
+    /* Même règle que pour une image : une page du site, ou une
+       adresse https. Tout le reste (javascript:, data:…) est refusé. */
+    var lien = adresseImage(a.lien);
+
+    /* Date de fin : une affiche sans échéance reste des mois après
+       l'événement. On n'en invente pas, mais on refuse ce qui n'est
+       pas une date lisible. */
+    var finLe = "";
+    var brut = String(a.finLe == null ? "" : a.finLe).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(brut) && !isNaN(Date.parse(brut + "T00:00:00Z"))) {
+      finLe = brut;
+    }
+
+    var secondes = Number(a.fermetureAuto);
+    if (!isFinite(secondes) || secondes < 0) secondes = 0;
+    if (secondes > 120) secondes = 120;
+
+    return {
+      actif: a.actif !== false,
+      image: image,
+      imagePetite: adresseImage(a.imagePetite) || image,
+      alt: texte(a.alt, 200),
+      lien: lien,
+      finLe: finLe,
+      fermetureAuto: Math.round(secondes),
+    };
   }
 
   /* Nettoie un produit venu de la base. Renvoie null si le produit
@@ -191,6 +231,7 @@ window.ZFV = (function () {
     numeroWhatsapp: numeroWhatsapp,
     texte: texte,
     nettoyerConfig: nettoyerConfig,
+    nettoyerAffiche: nettoyerAffiche,
     nettoyerProduit: nettoyerProduit,
   };
 })();

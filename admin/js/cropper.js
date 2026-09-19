@@ -4,16 +4,22 @@
    Tout se passe dans le navigateur : aucune photo n'est envoyée
    ailleurs tant que vous ne publiez pas.
 
-   La photo est cadrée en carré (le format des vignettes du site),
-   avec zoom et déplacement. À la validation, deux JPEG sont
-   produits : 900 px pour la fiche produit, 450 px pour les
-   vignettes — exactement les tailles utilisées par le site.
+   Le cadre n'est pas toujours carré. Les photos de produits le
+   sont (c'est le format des vignettes du menu), les affiches sont
+   verticales comme une story Instagram. Le format demandé arrive
+   dans `options.formats` ; le cadre à l'écran s'y adapte, et
+   chaque taille est produite en refaisant le rendu depuis la photo
+   d'origine plutôt qu'en agrandissant l'aperçu.
    ========================================================= */
 
 window.Cropper = (function () {
   "use strict";
 
-  var TAILLES = [900, 450];
+  /* Produits et galerie : 900 px pour la fiche, 450 px pour la vignette. */
+  var FORMATS_CARRES = [
+    { taille: 900, largeur: 900, hauteur: 900 },
+    { taille: 450, largeur: 450, hauteur: 450 },
+  ];
   var QUALITE = 0.82;
 
   /* Charge un fichier choisi par l'utilisateur en objet Image */
@@ -37,10 +43,17 @@ window.Cropper = (function () {
 
   /* ---------------------------------------------------------
      Éditeur de recadrage attaché à un conteneur.
-     Le conteneur affiche la photo dans un cadre carré ;
+     Le conteneur affiche la photo dans le cadre demandé ;
      on la déplace à la souris ou au doigt, on zoome au curseur.
      --------------------------------------------------------- */
-  function creer(conteneur, image) {
+  function creer(conteneur, image, options) {
+    var formats = (options && options.formats) || FORMATS_CARRES;
+    var refL = formats[0].largeur;
+    var refH = formats[0].hauteur;
+    /* Un cadre vertical occupe beaucoup de hauteur : on le laisse
+       moins large pour qu'il tienne dans la fenêtre sans défilement. */
+    var largeurMax = refH > refL ? 300 : 460;
+
     conteneur.innerHTML =
       '<div class="crop-stage" tabindex="0" aria-label="Zone de recadrage : faites glisser pour déplacer la photo">' +
       '<canvas class="crop-canvas"></canvas>' +
@@ -57,23 +70,27 @@ window.Cropper = (function () {
     var ctx = canvas.getContext("2d");
     var zoomInput = conteneur.querySelector(".crop-zoom-input");
 
+    scene.style.setProperty("--crop-ratio", refL + " / " + refH);
+    scene.style.setProperty("--crop-max", largeurMax + "px");
+
     var etat = { zoom: 1, dx: 0, dy: 0 };
-    var cote = 0; /* côté du carré affiché, en pixels écran */
+    var cadreL = 0, cadreH = 0; /* cadre affiché, en pixels écran */
 
     function dimensionner() {
-      cote = Math.max(120, Math.min(scene.clientWidth, 460));
+      cadreL = Math.max(120, Math.min(scene.clientWidth || largeurMax, largeurMax));
+      cadreH = Math.round(cadreL * refH / refL);
       var ratio = window.devicePixelRatio || 1;
-      canvas.width = cote * ratio;
-      canvas.height = cote * ratio;
-      canvas.style.width = cote + "px";
-      canvas.style.height = cote + "px";
+      canvas.width = cadreL * ratio;
+      canvas.height = cadreH * ratio;
+      canvas.style.width = cadreL + "px";
+      canvas.style.height = cadreH + "px";
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
       dessiner();
     }
 
-    /* Échelle minimale pour que la photo couvre tout le carré */
+    /* Échelle minimale pour que la photo couvre tout le cadre */
     function echelleCouvrante() {
-      return Math.max(cote / image.naturalWidth, cote / image.naturalHeight);
+      return Math.max(cadreL / image.naturalWidth, cadreH / image.naturalHeight);
     }
 
     /* Empêche de laisser apparaître du vide sur les bords */
@@ -81,8 +98,8 @@ window.Cropper = (function () {
       var e = echelleCouvrante() * etat.zoom;
       var l = image.naturalWidth * e;
       var h = image.naturalHeight * e;
-      var maxX = Math.max(0, (l - cote) / 2);
-      var maxY = Math.max(0, (h - cote) / 2);
+      var maxX = Math.max(0, (l - cadreL) / 2);
+      var maxY = Math.max(0, (h - cadreH) / 2);
       etat.dx = Math.max(-maxX, Math.min(maxX, etat.dx));
       etat.dy = Math.max(-maxY, Math.min(maxY, etat.dy));
     }
@@ -92,8 +109,8 @@ window.Cropper = (function () {
       var e = echelleCouvrante() * etat.zoom;
       var l = image.naturalWidth * e;
       var h = image.naturalHeight * e;
-      ctx.clearRect(0, 0, cote, cote);
-      ctx.drawImage(image, (cote - l) / 2 + etat.dx, (cote - h) / 2 + etat.dy, l, h);
+      ctx.clearRect(0, 0, cadreL, cadreH);
+      ctx.drawImage(image, (cadreL - l) / 2 + etat.dx, (cadreH - h) / 2 + etat.dy, l, h);
     }
 
     /* Déplacement à la souris et au doigt */
@@ -150,26 +167,28 @@ window.Cropper = (function () {
        On refait le rendu à la taille cible plutôt que d'agrandir
        l'aperçu : la netteté est celle de la photo d'origine.      */
     function exporter() {
-      return TAILLES.map(function (taille) {
+      return formats.map(function (f) {
         var c = document.createElement("canvas");
-        c.width = taille; c.height = taille;
+        c.width = f.largeur; c.height = f.hauteur;
         var g = c.getContext("2d");
         g.imageSmoothingQuality = "high";
         /* fond blanc : évite le noir si la photo a de la transparence */
         g.fillStyle = "#ffffff";
-        g.fillRect(0, 0, taille, taille);
+        g.fillRect(0, 0, f.largeur, f.hauteur);
 
-        var facteur = taille / cote;
+        var facteur = f.largeur / cadreL;
         var e = echelleCouvrante() * etat.zoom * facteur;
         var l = image.naturalWidth * e;
         var h = image.naturalHeight * e;
         g.drawImage(image,
-          (taille - l) / 2 + etat.dx * facteur,
-          (taille - h) / 2 + etat.dy * facteur,
+          (f.largeur - l) / 2 + etat.dx * facteur,
+          (f.hauteur - h) / 2 + etat.dy * facteur,
           l, h);
 
         return {
-          taille: taille,
+          taille: f.taille,
+          largeur: f.largeur,
+          hauteur: f.hauteur,
           dataURL: c.toDataURL("image/jpeg", QUALITE),
         };
       });
@@ -188,9 +207,18 @@ window.Cropper = (function () {
     return Math.round(base64Seul(dataURL).length * 0.75 / 1024);
   }
 
+  /* Story Instagram : 1080 × 1920, et une version allégée pour
+     les connexions lentes. */
+  var FORMATS_AFFICHE = [
+    { taille: 1080, largeur: 1080, hauteur: 1920 },
+    { taille: 540, largeur: 540, hauteur: 960 },
+  ];
+
   return {
     chargerFichier: chargerFichier,
     creer: creer,
     poidsKo: poidsKo,
+    FORMATS_CARRES: FORMATS_CARRES,
+    FORMATS_AFFICHE: FORMATS_AFFICHE,
   };
 })();

@@ -199,8 +199,12 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0 0 0.5em; line-height: 1
 .photo-slot__actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
 .photo-slot input[type="file"] { display: none; }
 
+/* Le format du cadre est fixe par le recadreur : carre pour les
+   photos de produits, vertical pour les affiches. */
 .crop-stage {
-  position: relative; width: 100%; aspect-ratio: 1/1; max-width: 460px;
+  position: relative; width: 100%;
+  aspect-ratio: var(--crop-ratio, 1 / 1);
+  max-width: var(--crop-max, 460px);
   margin: 0 auto; border-radius: 10px; overflow: hidden;
   background: #2a1c14; cursor: grab; touch-action: none;
 }
@@ -345,4 +349,22 @@ code {
   .galerie-ligne { grid-template-columns: 70px 1fr; }
   .galerie-vignette { width: 70px; height: 70px; }
   .galerie-ligne__actions { grid-column: 1 / -1; flex-direction: row; justify-content: flex-end; }
+}
+
+/* ---------- Affiche d'annonce ---------- */
+.affiche-editeur { display: flex; gap: 1.2rem; align-items: flex-start; flex-wrap: wrap; }
+.affiche-editeur__corps { flex: 1; min-width: 240px; }
+.affiche-apercu {
+  width: 150px; flex-shrink: 0;
+  aspect-ratio: 1080 / 1920; border-radius: 10px; overflow: hidden;
+  background: var(--cream); border: 1px solid var(--bord);
+}
+.affiche-apercu img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.affiche-apercu__vide {
+  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+  text-align: center; padding: 0.6rem; font-size: 0.8rem; color: var(--ink-soft);
+}
+@media (max-width: 560px) {
+  .affiche-apercu { width: 120px; }
+  .affiche-editeur__corps { min-width: 0; }
 }

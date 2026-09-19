@@ -652,7 +652,9 @@
       '<div class="adm-modale__boite">' +
       "<h2>Recadrer la photo</h2>" +
       '<p class="aide" style="margin-top:-0.4rem;color:var(--ink-soft);font-size:0.88rem">' +
-      "Faites glisser la photo pour la centrer, et utilisez le zoom. Le cadre carré correspond exactement à ce qui s'affichera sur le site.</p>" +
+      "Faites glisser la photo pour la centrer, et utilisez le zoom. Le cadre " +
+      esc(options.formeCadre || "carré") +
+      " correspond exactement à ce qui s'affichera sur le site.</p>" +
       '<div id="zone-crop"></div>' +
       '<div class="adm-modale__actions">' +
       '<button class="btn btn--ghost" data-annuler>Annuler</button>' +
@@ -660,7 +662,8 @@
       "</div></div>";
     document.body.appendChild(modale);
 
-    var crop = Cropper.creer($("#zone-crop", modale), image);
+    var formats = options.formats || Cropper.FORMATS_CARRES;
+    var crop = Cropper.creer($("#zone-crop", modale), image, { formats: formats });
 
     function fermer() { modale.remove(); }
     $("[data-annuler]", modale).addEventListener("click", fermer);
@@ -691,10 +694,14 @@
         });
       });
 
+      var grandeTaille = formats[0].taille;
+      var petiteTaille = formats[formats.length - 1].taille;
+
       chaine
         .then(function () {
           fermer();
-          options.surSucces(urls[900] || urls[450], urls[450] || urls[900], poids);
+          options.surSucces(urls[grandeTaille] || urls[petiteTaille],
+                            urls[petiteTaille] || urls[grandeTaille], poids);
           toast("Photo envoyée (" + poids + " Ko)");
         })
         .catch(function (err) {
@@ -779,6 +786,173 @@
     majEtat();
     rendre();
     return true;
+  }
+
+
+  /* =========================================================
+     VUE : AFFICHE D'ANNONCE
+     ========================================================= */
+  /* Date du jour au format AAAA-MM-JJ, dans le fuseau de la
+     personne qui publie — c'est celui qui compte pour elle. */
+  function dateDuJour() {
+    var d = new Date();
+    var m = String(d.getMonth() + 1), j = String(d.getDate());
+    return d.getFullYear() + "-" + (m.length < 2 ? "0" + m : m) + "-" + (j.length < 2 ? "0" + j : j);
+  }
+
+  function afficheCourante() {
+    if (!D.config.affiche || typeof D.config.affiche !== "object") {
+      D.config.affiche = { actif: false, image: "", imagePetite: "", alt: "", lien: "", finLe: "", fermetureAuto: 0 };
+    }
+    return D.config.affiche;
+  }
+
+  /* Le lien se choisit dans une liste plutôt qu'en tapant une
+     adresse : personne ne devrait avoir à connaître la forme
+     « produit.html?p=pilaou » pour renvoyer vers un gâteau. */
+  function optionsLienAffiche(valeur) {
+    var choix = [
+      { v: "", t: "Aucun — l'affiche n'est pas cliquable" },
+      { v: "index.html#menu", t: "Le menu du site" },
+      { v: "commande.html", t: "Le panier" },
+    ];
+    D.produits.forEach(function (p) {
+      choix.push({ v: "produit.html?p=" + p.slug, t: "Produit : " + p.name });
+    });
+    if (valeur && !choix.some(function (c) { return c.v === valeur; })) {
+      choix.push({ v: valeur, t: "Adresse enregistrée : " + valeur });
+    }
+    return choix.map(function (c) {
+      return '<option value="' + esc(c.v) + '"' + (c.v === valeur ? " selected" : "") + ">" + esc(c.t) + "</option>";
+    }).join("");
+  }
+
+  function vueAffiche() {
+    var a = afficheCourante();
+    var duree = [0, 10, 20].map(function (n) {
+      return '<option value="' + n + '"' + (Number(a.fermetureAuto) === n ? " selected" : "") + ">" +
+        (n === 0 ? "Non — elle reste jusqu'au clic" : "Après " + n + " secondes") + "</option>";
+    }).join("");
+
+    var expiree = a.finLe && a.finLe < dateDuJour();
+    var etat = !a.actif
+      ? '<span class="etiquette etiquette--off">Désactivée</span>'
+      : (!a.image ? '<span class="etiquette etiquette--off">Sans image</span>'
+        : (expiree ? '<span class="etiquette etiquette--off">Date passée</span>'
+          : '<span class="etiquette etiquette--prix">Visible sur le site</span>'));
+
+    return (
+      '<div class="adm-vue__tete"><div><h1>Affiche</h1>' +
+      "<p>Une annonce en grand, montrée une seule fois à chaque visiteur en arrivant sur le site. " +
+      "Pour un événement, une fermeture, une nouveauté.</p></div></div>" +
+
+      '<div class="bloc"><h3>État ' + etat + "</h3>" +
+      '<label class="interrupteur"><input type="checkbox" id="af-actif"' + (a.actif ? " checked" : "") +
+      "> Afficher cette annonce sur le site</label>" +
+      '<p class="aide">Chaque visiteur la voit <strong>une seule fois</strong>. ' +
+      "Elle ne s'affiche jamais sur la page du panier, pour ne pas interrompre une commande en cours. " +
+      "Si vous changez l'image ou le texte, elle sera revue une fois par tout le monde.</p></div>" +
+
+      '<div class="bloc"><h3>Image</h3>' +
+      '<p class="bloc__note">Format vertical, comme une story Instagram (1080 × 1920). ' +
+      "Une affiche préparée dans Canva ou sur votre téléphone convient parfaitement.</p>" +
+      '<div class="affiche-editeur">' +
+      '<div class="affiche-apercu">' +
+      (a.image
+        ? '<img src="' + esc(apercuImage(a.imagePetite || a.image)) + '" alt="">'
+        : '<div class="affiche-apercu__vide">Aucune affiche</div>') +
+      "</div>" +
+      '<div class="affiche-editeur__corps">' +
+      '<div class="photo-slot__actions">' +
+      '<button type="button" class="btn-mini" id="af-choisir">' + (a.image ? "Remplacer l'affiche" : "Choisir une affiche") + "</button>" +
+      (a.image ? '<button type="button" class="btn-mini btn-mini--danger" id="af-retirer">Retirer</button>' : "") +
+      "</div>" +
+      '<input type="file" id="af-fichier" accept="image/*" hidden>' +
+
+      '<div class="champ"><label for="af-alt">Que dit cette affiche ?</label>' +
+      '<input type="text" id="af-alt" maxlength="200" value="' + esc(a.alt || "") + '" ' +
+      'placeholder="Ex. Gâteaux de l\'Aïd — commandes jusqu\'au 28 septembre">' +
+      '<p class="aide">Lu à voix haute par les lecteurs d\'écran, et affiché si l\'image ne charge pas. ' +
+      "Écrivez ce qu'on lit sur l'affiche.</p></div>" +
+      "</div></div></div>" +
+
+      '<div class="bloc"><h3>Comportement</h3>' +
+      '<div class="champ-double">' +
+      '<div class="champ"><label for="af-fin">Dernier jour d\'affichage</label>' +
+      '<input type="date" id="af-fin" value="' + esc(a.finLe || "") + '" min="' + dateDuJour() + '">' +
+      '<p class="aide">Passé ce jour, l\'affiche disparaît toute seule. ' +
+      "Sans date, elle reste jusqu'à ce que vous la désactiviez.</p></div>" +
+      '<div class="champ"><label for="af-duree">Fermeture automatique</label>' +
+      '<select id="af-duree">' + duree + "</select>" +
+      '<p class="aide">Nous conseillons « Non » : la croix suffit, et une affiche qui disparaît ' +
+      "toute seule pendant qu'on la lit agace plus qu'elle n'aide.</p></div>" +
+      "</div>" +
+      '<div class="champ"><label for="af-lien">Où mène un clic sur l\'affiche ?</label>' +
+      '<select id="af-lien">' + optionsLienAffiche(a.lien || "") + "</select></div>" +
+      "</div>" +
+
+      '<div class="message message--info"><strong>Comment la voir vous-même</strong>' +
+      "Vous ne la reverrez plus une fois fermée, comme vos visiteurs. Pour la revoir, ouvrez le site " +
+      "dans une fenêtre de navigation privée, ou modifiez le texte de l'affiche.</div>"
+    );
+  }
+
+  function brancherAffiche() {
+    var a = afficheCourante();
+
+    $("#af-actif").addEventListener("change", function () {
+      a.actif = this.checked; majEtat(); rendre();
+    });
+    $("#af-alt").addEventListener("input", function () { a.alt = this.value; majEtat(); });
+    $("#af-fin").addEventListener("change", function () { a.finLe = this.value; majEtat(); rendre(); });
+    $("#af-duree").addEventListener("change", function () {
+      a.fermetureAuto = parseInt(this.value, 10) || 0; majEtat();
+    });
+    $("#af-lien").addEventListener("change", function () { a.lien = this.value; majEtat(); });
+
+    var retirer = $("#af-retirer");
+    if (retirer) {
+      retirer.addEventListener("click", function () {
+        a.image = ""; a.imagePetite = "";
+        majEtat(); rendre();
+      });
+    }
+
+    var input = $("#af-fichier");
+    $("#af-choisir").addEventListener("click", function () {
+      /* Prévenir avant le recadrage plutôt qu'après : cadrer une
+         affiche pour apprendre ensuite qu'on ne peut pas l'envoyer
+         est décourageant. */
+      if (!peutEnregistrer()) {
+        toast(raisonBlocage() + " : l'affiche ne peut pas être envoyée", true);
+        return;
+      }
+      input.click();
+    });
+
+    input.addEventListener("change", function () {
+      var fichier = input.files && input.files[0];
+      input.value = "";
+      if (!fichier) return;
+      if (fichier.size > 25 * 1024 * 1024) { toast("Image trop lourde (25 Mo maximum)", true); return; }
+
+      Cropper.chargerFichier(fichier)
+        .then(function (img) {
+          ouvrirRecadrageGenerique(img, {
+            dossier: "affiches",
+            nom: "affiche",
+            formeCadre: "vertical",
+            formats: Cropper.FORMATS_AFFICHE,
+            surSucces: function (grande, petite) {
+              a.image = grande;
+              a.imagePetite = petite;
+              if (!a.actif) a.actif = true;   /* on vient de la choisir : elle est faite pour être vue */
+              majEtat(); rendre();
+            },
+          });
+        })
+        .catch(function (err) { toast(err.message, true); });
+    });
   }
 
   /* =========================================================
@@ -1509,6 +1683,7 @@
     else if (vueCourante === "contact") { vue.innerHTML = vueContact(); brancherChampsConfig(); }
     else if (vueCourante === "galerie") { vue.innerHTML = vueGalerie(); brancherGalerie(); }
     else if (vueCourante === "temoignages") { vue.innerHTML = vueTemoignages(); brancherTemoignages(); }
+    else if (vueCourante === "affiche") { vue.innerHTML = vueAffiche(); brancherAffiche(); }
     else if (vueCourante === "connexion") { vue.innerHTML = vueConnexion(); brancherConnexion(); }
 
     if (vueCourante !== "connexion") {

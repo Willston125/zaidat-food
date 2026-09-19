@@ -20,6 +20,14 @@
 window.Serialize = (function () {
   "use strict";
 
+  /* Date du jour au format AAAA-MM-JJ, dans le fuseau de la
+     personne qui publie — c'est celui qui compte pour elle. */
+  function dateDuJour() {
+    var d = new Date();
+    var m = String(d.getMonth() + 1), j = String(d.getDate());
+    return d.getFullYear() + "-" + (m.length < 2 ? "0" + m : m) + "-" + (j.length < 2 ? "0" + j : j);
+  }
+
   function verifier(categories, produits, config) {
     var erreurs = [], alertes = [];
 
@@ -82,6 +90,28 @@ window.Serialize = (function () {
         erreurs.push("Lien " + k + " : l'adresse doit commencer par « https:// ».");
       }
     });
+
+    /* L'affiche est facultative, mais une affiche active incomplète
+       serait invisible sans que personne comprenne pourquoi. */
+    var af = config && config.affiche;
+    if (af && af.actif) {
+      if (!af.image) {
+        erreurs.push("Affiche activée mais sans image : rien ne s'afficherait.");
+      }
+      if (!af.alt) {
+        alertes.push("Affiche : pas de texte de remplacement — les personnes malvoyantes n'en sauront rien.");
+      }
+      if (!af.finLe) {
+        alertes.push("Affiche sans date de fin : elle restera visible jusqu'à ce que vous la désactiviez.");
+      } else if (af.finLe < dateDuJour()) {
+        alertes.push("Affiche : la date de fin est passée, elle ne s'affiche plus sur le site.");
+      }
+      /* « index.html#menu » est un lien légitime : l'ancre compte
+         autant que le paramètre. */
+      if (af.lien && !/^https:\/\//i.test(af.lien) && !/^[a-z0-9._~-]+\.html([?#]|$)/i.test(af.lien)) {
+        erreurs.push("Affiche : le lien doit être une page du site (ex. produit.html?p=pilaou) ou une adresse https.");
+      }
+    }
 
     return { erreurs: erreurs, alertes: alertes, valide: erreurs.length === 0 };
   }
