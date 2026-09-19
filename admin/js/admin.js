@@ -802,7 +802,10 @@
 
   function afficheCourante() {
     if (!D.config.affiche || typeof D.config.affiche !== "object") {
-      D.config.affiche = { actif: false, image: "", imagePetite: "", alt: "", lien: "", finLe: "", fermetureAuto: 0 };
+      D.config.affiche = {
+        actif: false, image: "", imagePetite: "", alt: "", lien: "", finLe: "",
+        fermetureAuto: 0, rappelMinutes: 30, relanceDefilement: 0,
+      };
     }
     return D.config.affiche;
   }
@@ -832,6 +835,29 @@
     var duree = [0, 10, 20].map(function (n) {
       return '<option value="' + n + '"' + (Number(a.fermetureAuto) === n ? " selected" : "") + ">" +
         (n === 0 ? "Non — elle reste jusqu'au clic" : "Après " + n + " secondes") + "</option>";
+    }).join("");
+
+    var rappelActuel = a.rappelMinutes === undefined ? 30 : Number(a.rappelMinutes);
+    var rappel = [
+      { v: 0, t: "Une seule fois — elle ne revient jamais" },
+      { v: 15, t: "Au bout de 15 minutes" },
+      { v: 30, t: "Au bout de 30 minutes" },
+      { v: 60, t: "Au bout d'une heure" },
+      { v: 180, t: "Au bout de trois heures" },
+      { v: 1440, t: "Une fois par jour" },
+    ].map(function (o) {
+      return '<option value="' + o.v + '"' + (rappelActuel === o.v ? " selected" : "") + ">" + o.t + "</option>";
+    }).join("");
+
+    var relanceActuelle = Number(a.relanceDefilement) || 0;
+    var relance = [
+      { v: 0, t: "Non" },
+      { v: 2, t: "Après 2 minutes de lecture" },
+      { v: 3, t: "Après 3 minutes de lecture" },
+      { v: 5, t: "Après 5 minutes de lecture" },
+      { v: 10, t: "Après 10 minutes de lecture" },
+    ].map(function (o) {
+      return '<option value="' + o.v + '"' + (relanceActuelle === o.v ? " selected" : "") + ">" + o.t + "</option>";
     }).join("");
 
     var expiree = a.finLe && a.finLe < dateDuJour();
@@ -891,9 +917,28 @@
       '<select id="af-lien">' + optionsLienAffiche(a.lien || "") + "</select></div>" +
       "</div>" +
 
+      '<div class="bloc"><h3>Quand la revoit-on ?</h3>' +
+      '<p class="bloc__note">Une annonce vue une seule fois et jamais revue ne pousse personne à ' +
+      "commander ; revue à chaque page, elle fait fuir. Ces deux réglages sont le curseur entre les deux. " +
+      "Dans tous les cas, elle ne s'affiche jamais sur la page du panier : on n'interrompt pas une " +
+      "commande en cours.</p>" +
+      '<div class="champ-double">' +
+      '<div class="champ"><label for="af-rappel">La remontrer</label>' +
+      '<select id="af-rappel">' + rappel + "</select>" +
+      '<p class="aide">Le compte repart à chaque fois que le visiteur la ferme, ' +
+      "qu'il reste sur le site ou qu'il revienne plus tard.</p></div>" +
+      '<div class="champ"><label for="af-relance">Relancer un visiteur qui hésite</label>' +
+      '<select id="af-relance">' + relance + "</select>" +
+      '<p class="aide">Quelqu\'un qui parcourt le menu depuis plusieurs minutes sans aller ' +
+      "commander hésite : l'affiche revient une fois, sans attendre le délai ci-contre. " +
+      "Seul le temps passé vraiment devant la page est compté.</p></div>" +
+      "</div></div>" +
+
       '<div class="message message--info"><strong>Comment la voir vous-même</strong>' +
-      "Vous ne la reverrez plus une fois fermée, comme vos visiteurs. Pour la revoir, ouvrez le site " +
-      "dans une fenêtre de navigation privée, ou modifiez le texte de l'affiche.</div>"
+      "Ajoutez <code>?affiche=test</code> à l'adresse du site — par exemple " +
+      "<code>zaidatfood.online/?affiche=test</code> — et elle s'affichera à chaque rechargement, " +
+      "sans attendre le délai et sans être retenue comme vue. Une affiche désactivée ou dont la date " +
+      "est passée ne s'affichera pas davantage : ce contrôle ne ment pas.</div>"
     );
   }
 
@@ -909,6 +954,12 @@
       a.fermetureAuto = parseInt(this.value, 10) || 0; majEtat();
     });
     $("#af-lien").addEventListener("change", function () { a.lien = this.value; majEtat(); });
+    $("#af-rappel").addEventListener("change", function () {
+      a.rappelMinutes = parseInt(this.value, 10) || 0; majEtat();
+    });
+    $("#af-relance").addEventListener("change", function () {
+      a.relanceDefilement = parseInt(this.value, 10) || 0; majEtat();
+    });
 
     var retirer = $("#af-retirer");
     if (retirer) {

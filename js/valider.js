@@ -179,6 +179,20 @@ window.ZFV = (function () {
     if (!isFinite(secondes) || secondes < 0) secondes = 0;
     if (secondes > 120) secondes = 120;
 
+    /* Au bout de combien de temps la revoit-on ? 30 minutes quand
+       rien n'est dit : une annonce vue une fois et jamais revue ne
+       pousse personne à commander. 0 veut dire « une seule fois ».
+       Plafonné à une semaine — au-delà, autant dire une seule fois. */
+    var rappel = Number(a.rappelMinutes);
+    if (!isFinite(rappel) || rappel < 0) rappel = 30;
+    if (rappel > 10080) rappel = 10080;
+
+    /* Relance après un moment de lecture, en minutes. 0 : désactivée.
+       Plafonnée à deux heures : au-delà la personne est partie. */
+    var relance = Number(a.relanceDefilement);
+    if (!isFinite(relance) || relance < 0) relance = 0;
+    if (relance > 120) relance = 120;
+
     return {
       actif: a.actif !== false,
       image: image,
@@ -187,6 +201,8 @@ window.ZFV = (function () {
       lien: lien,
       finLe: finLe,
       fermetureAuto: Math.round(secondes),
+      rappelMinutes: Math.round(rappel),
+      relanceDefilement: Math.round(relance),
     };
   }
 
