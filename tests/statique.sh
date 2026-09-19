@@ -160,5 +160,51 @@ sys.exit(1 if manque else 0)
 PY
 
 echo
+echo "=== 9. Dossiers de photos : le site, le menage et la base d'accord ==="
+# Trois endroits nomment la meme liste de dossiers, et rien ne les
+# reliait : le dashboard qui depose les photos, le nettoyage qui les
+# libere, et la regle SQL qui autorise l'ecriture. Le jour ou « affiches »
+# a ete ajoute aux deux premiers sans l'etre au troisieme, l'envoi a ete
+# refuse par la base avec un message illisible. Ce controle les compare.
+python3 - <<'PY' && verdict 0 "les dossiers de photos concordent partout" || verdict 1 "listes de dossiers divergentes"
+import re, sys
+
+def lire(f):
+    return open(f, encoding='utf-8').read()
+
+# 1. Ce que le dashboard depose reellement. Un dossier s'ecrit soit en
+#    clair (dossier: "affiches"), soit par un choix (cle === "produit"
+#    ? "produits" : "lifestyle") : les deux formes sont relevees.
+admin = lire('admin/js/admin.js')
+deposes = set()
+for bloc in re.findall(r'dossier:\s*([^\n]+)', admin):
+    # Dans un choix, seules les branches comptent : la valeur testee
+    # a gauche du « ? » n'est pas un nom de dossier.
+    if '?' in bloc: bloc = bloc.split('?', 1)[1]
+    deposes |= set(re.findall(r'"([a-z]+)"', bloc))
+
+# 2. Ce que le nettoyage reconnait comme etant a nous
+m = re.search(r'\^\(([a-z|]+)\)\\/\[A-Za-z0-9\]', lire('js/supabase.js'))
+menage = set(m.group(1).split('|')) if m else set()
+
+# 3. Ce que la base autorise a l'ecriture
+m = re.search(r"\^\(([a-z|]+)\)/\[A-Za-z0-9\]", lire('admin/supabase-installation.sql'))
+base = set(m.group(1).split('|')) if m else set()
+
+if not menage: print('      regex introuvable dans js/supabase.js')
+if not base:   print('      regex introuvable dans admin/supabase-installation.sql')
+
+mauvais = False
+if menage != base:
+    print('      nettoyage', sorted(menage), '!= base', sorted(base)); mauvais = True
+manquants = deposes - base
+if manquants:
+    print('      deposes par le dashboard mais refuses par la base :', sorted(manquants)); mauvais = True
+if not mauvais:
+    print('      dossiers :', ' '.join(sorted(base)))
+sys.exit(1 if (mauvais or not menage or not base) else 0)
+PY
+
+echo
 echo "==================== $ok reussis, $ko echoues ===================="
 [ "$ko" = "0" ]
