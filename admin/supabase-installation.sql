@@ -227,9 +227,17 @@ insert into storage.buckets (id, name, public)
 values ('photos', 'photos', true)
 on conflict (id) do update set public = true;
 
--- Seuls ces chemins sont acceptés : produits/…, lifestyle/… et
--- galerie/…, avec une extension d'image. Tout le reste est refusé,
--- y compris les tentatives de remontée de dossier (« ../ »).
+-- Seuls ces chemins sont acceptés : produits/…, lifestyle/…,
+-- galerie/… et affiches/…, avec une extension d'image. Tout le reste
+-- est refusé, y compris les tentatives de remontée de dossier (« ../ »).
+--
+-- ATTENTION : relancer une ANCIENNE copie de ce fichier remplace cette
+-- fonction par sa version d'alors, sans le moindre message. Les règles
+-- ci-dessous, elles, sont identiques d'une version à l'autre : tout a
+-- l'air en place, et pourtant l'envoi d'une photo est refusé. Prenez
+-- toujours la version à jour du dépôt. Pour vérifier ce qui est
+-- réellement installé :
+--   select public.zf_chemin_photo_valide('affiches/photo-1080-abc.jpg');
 create or replace function public.zf_chemin_photo_valide(nom text)
 returns boolean
 language sql

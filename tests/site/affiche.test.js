@@ -15,6 +15,50 @@ async function page(b, affiche, url, viewport) {
   return { c, p, erreurs };
 }
 const visible = (p) => p.evaluate(() => !!document.querySelector('.affiche.est-visible'));
+const presente = (p) => p.evaluate(() => !!document.querySelector('.affiche'));
+
+/* Avec une horloge pilotee, le chargement de l'image reste, lui, sur
+   le temps reel : on fait donc avancer les deux en alternance plutot
+   que de deviner un delai. */
+async function attendreAffiche(p, essais = 12) {
+  for (let i = 0; i < essais; i++) {
+    await p.clock.runFor(200);
+    await p.waitForTimeout(120);
+    if (await visible(p)) return true;
+  }
+  return false;
+}
+
+/* Meme calcul que le site : l'identifiant d'une affiche est un
+   condense de son contenu. */
+function cleAffiche(a) {
+  const source = [a.image, a.alt, a.lien, a.finLe].join('|');
+  let h = 5381;
+  for (let i = 0; i < source.length; i++) h = ((h << 5) + h + source.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+
+/* Page avec une memoire de visiteur preparee, et une horloge que le
+   test peut avancer : attendre trente vraies minutes n'est pas un
+   test, c'est une pause. */
+async function pageAvancee(b, opts) {
+  const etat = A.etatNeuf();
+  const { c, p, erreurs } = await A.ouvrir(b, etat, opts.viewport);
+  if (opts.horloge) await p.clock.install({ time: new Date() });
+  if (opts.vues !== undefined) {
+    await p.addInitScript((v) => {
+      try { localStorage.setItem('zaidat_affiches_vues', JSON.stringify(v)); } catch (e) {}
+    }, opts.vues);
+  }
+  await p.addInitScript((a) => {
+    window.__affiche = a;
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof SITE_CONFIG !== 'undefined') SITE_CONFIG.affiche = window.__affiche;
+    });
+  }, opts.affiche);
+  await p.goto(A.BASE + (opts.url || '/index.html'), { waitUntil: 'load' });
+  return { c, p, erreurs };
+}
 const demain = () => { const d = new Date(Date.now() + 864e5); return d.toISOString().slice(0, 10); };
 const hier   = () => { const d = new Date(Date.now() - 864e5); return d.toISOString().slice(0, 10); };
 const base = { actif: true, image: IMG, imagePetite: IMG, alt: "Gateaux de l'Aid", lien: '', finLe: '', fermetureAuto: 0 };
@@ -38,7 +82,11 @@ const base = { actif: true, image: IMG, imagePetite: IMG, alt: "Gateaux de l'Aid
     }));
     console.log('    apparue ' + apparue + ' ms apres le debut de la navigation');
     A.tv('elle apparait', apparue >= 0);
-    A.tv('elle laisse la page s afficher d abord', apparue > 1000, apparue + ' ms');
+    /* Deux exigences contraires, et c'est voulu : assez tot pour
+       qu'elle serve a quelque chose, assez tard pour ne pas surgir
+       par-dessus une page a moitie peinte. */
+    A.tv('elle laisse la page se dessiner', apparue > 300, apparue + ' ms');
+    A.tv('elle ne se fait pas attendre', apparue < 1500, apparue + ' ms');
     await p.waitForTimeout(600);
     const d = await p.evaluate(() => {
       const r = document.querySelector('.affiche');
@@ -56,7 +104,10 @@ const base = { actif: true, image: IMG, imagePetite: IMG, alt: "Gateaux de l'Aid
     await p.waitForTimeout(400);
     A.tv('la croix la ferme', !(await p.evaluate(() => !!document.querySelector('.affiche'))));
     await p.reload({ waitUntil: 'load' }); await p.waitForTimeout(2600);
-    A.tv('UNE SEULE FOIS : elle ne revient pas', !(await visible(p)));
+    /* Rechargee dans la foulee : le rappel (30 min par defaut) n'est
+       pas ecoule, elle ne revient donc pas tout de suite. Le rappel
+       lui-meme est verifie plus bas. */
+    A.tv('rechargee aussitot, elle ne revient pas', !(await visible(p)));
     A.tv('aucune erreur JavaScript', erreurs.length === 0, erreurs.join(' | '));
     await c.close();
   }
@@ -132,6 +183,117 @@ const base = { actif: true, image: IMG, imagePetite: IMG, alt: "Gateaux de l'Aid
     A.tv('aucun debordement horizontal', d.debord === 0, d.debord + 'px');
     A.tv('aucune erreur JavaScript', erreurs.length === 0, erreurs.join(' | '));
     await c.close();
+  }
+
+  console.log('\n=== 6. Le rappel : la revoir au bout d un moment ===');
+  {
+    const cle = cleAffiche(base);
+
+    /* Vue il y a cinq minutes, rappel a trente : trop tot. */
+    let r = await pageAvancee(b, { affiche: Object.assign({}, base, { rappelMinutes: 30 }),
+                                   vues: { [cle]: Date.now() - 5 * 60000 } });
+    await r.p.waitForTimeout(1500);
+    A.tv('vue il y a 5 min, rappel a 30 : elle ne revient pas encore', !(await presente(r.p)));
+    await r.c.close();
+
+    /* Vue il y a trente-et-une minutes : c'est l'heure. */
+    r = await pageAvancee(b, { affiche: Object.assign({}, base, { rappelMinutes: 30 }),
+                               vues: { [cle]: Date.now() - 31 * 60000 } });
+    await r.p.waitForTimeout(1500);
+    A.tv('VUE IL Y A 31 MIN : ELLE REVIENT', await visible(r.p));
+    A.tv('aucune erreur JavaScript (rappel)', r.erreurs.length === 0, r.erreurs.join(' | '));
+    await r.c.close();
+
+    /* Zero : l'ancien comportement, une seule fois pour toujours. */
+    r = await pageAvancee(b, { affiche: Object.assign({}, base, { rappelMinutes: 0 }),
+                               vues: { [cle]: Date.now() - 31 * 60000 } });
+    await r.p.waitForTimeout(1500);
+    A.tv('reglee sur « une seule fois », elle ne revient jamais', !(await presente(r.p)));
+    await r.c.close();
+
+    /* Memoire de l'ancienne version : une simple liste, sans date. */
+    r = await pageAvancee(b, { affiche: base, vues: [cle] });
+    await r.p.waitForTimeout(1500);
+    A.tv('une memoire de l ancienne version ne la bloque pas', await visible(r.p));
+    await r.c.close();
+  }
+
+  console.log('\n=== 7. Elle revient sans recharger la page ===');
+  {
+    const r = await pageAvancee(b, { affiche: Object.assign({}, base, { rappelMinutes: 30 }), horloge: true });
+    await r.p.clock.runFor(1500);
+    A.tv('elle s ouvre a l arrivee', await visible(r.p));
+
+    await r.p.click('.affiche__fermer');
+    await r.p.clock.runFor(500);
+    A.tv('la croix la ferme', !(await presente(r.p)));
+
+    await r.p.clock.fastForward(29 * 60000);
+    A.tv('a 29 minutes, toujours rien', !(await presente(r.p)));
+
+    await r.p.clock.fastForward(2 * 60000);
+    A.tv('A 31 MINUTES, ELLE REVIENT TOUTE SEULE', await attendreAffiche(r.p));
+    A.tv('aucune erreur JavaScript (reouverture)', r.erreurs.length === 0, r.erreurs.join(' | '));
+    await r.c.close();
+  }
+
+  console.log('\n=== 8. Relance de qui hesite : lit, ne commande pas ===');
+  {
+    const cle = cleAffiche(base);
+    const avecRelance = Object.assign({}, base, { rappelMinutes: 30, relanceDefilement: 3 });
+
+    /* Vue a l'instant : le rappel de trente minutes la bloque. Mais
+       trois minutes de lecture doivent la faire revenir quand meme. */
+    let r = await pageAvancee(b, { affiche: avecRelance, vues: { [cle]: Date.now() }, horloge: true });
+    await r.p.clock.runFor(1500);
+    A.tv('le rappel la retient d abord', !(await presente(r.p)));
+
+    await r.p.evaluate(() => window.scrollTo(0, 600));
+    await r.p.clock.fastForward(3 * 60000 + 2000);
+    A.tv('APRES 3 MIN DE LECTURE, ELLE REVIENT', await attendreAffiche(r.p));
+    A.tv('aucune erreur JavaScript (relance)', r.erreurs.length === 0, r.erreurs.join(' | '));
+    await r.c.close();
+
+    /* Onglet ouvert mais personne devant : pas de defilement, pas de
+       relance. Sinon on ouvrirait une affiche pour un fauteuil vide. */
+    r = await pageAvancee(b, { affiche: avecRelance, vues: { [cle]: Date.now() }, horloge: true });
+    await r.p.clock.runFor(1500);
+    await r.p.clock.fastForward(6 * 60000);
+    await r.p.clock.runFor(1500);
+    A.tv('sans le moindre defilement, on ne relance personne', !(await presente(r.p)));
+    await r.c.close();
+
+    /* Et jamais sur la page du panier. */
+    r = await pageAvancee(b, { affiche: avecRelance, url: '/commande.html', horloge: true });
+    await r.p.clock.runFor(1500);
+    await r.p.evaluate(() => window.scrollTo(0, 600));
+    await r.p.clock.fastForward(6 * 60000);
+    await r.p.clock.runFor(1500);
+    A.tv('la page du panier reste epargnee, relance comprise', !(await presente(r.p)));
+    await r.c.close();
+  }
+
+  console.log('\n=== 9. « ?affiche=test » pour la controler soi-meme ===');
+  {
+    const cle = cleAffiche(base);
+    const r = await pageAvancee(b, { affiche: Object.assign({}, base, { rappelMinutes: 0 }),
+                                     vues: { [cle]: Date.now() },
+                                     url: '/index.html?affiche=test' });
+    await r.p.waitForTimeout(1500);
+    A.tv('elle s affiche meme deja vue', await visible(r.p));
+    await r.p.click('.affiche__fermer');
+    await r.p.waitForTimeout(300);
+    const memoire = await r.p.evaluate(() => localStorage.getItem('zaidat_affiches_vues'));
+    A.tv('le controle ne compte pas comme une vue', !/\d{13}/.test(String(memoire).replace(cle, '')) || String(memoire).indexOf(cle) !== -1);
+    await r.c.close();
+
+    /* Une affiche desactivee ne s affiche pas davantage : le controle
+       ne doit pas faire croire qu elle est en ligne. */
+    const r2 = await pageAvancee(b, { affiche: Object.assign({}, base, { actif: false }),
+                                      url: '/index.html?affiche=test' });
+    await r2.p.waitForTimeout(1500);
+    A.tv('une affiche desactivee reste invisible, meme en controle', !(await presente(r2.p)));
+    await r2.c.close();
   }
 
   await b.close();

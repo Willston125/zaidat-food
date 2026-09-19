@@ -121,6 +121,13 @@ function creerServeur(etat) {
     }
     if (url.includes('/storage/v1/object/')) {
       if (methode === 'DELETE') { etat.photosSupprimees.push(url.split('/photos/')[1]); return json({}); }
+      /* Le refus mot pour mot de Supabase quand la regle du stockage
+         n'autorise pas ce dossier. */
+      if (etat.refusStockage) {
+        return json({ statusCode: '403', error: 'Unauthorized',
+                      message: 'new row violates row-level security policy',
+                      code: 'AccessDenied' }, 403);
+      }
       return json({ Key: 'ok' });
     }
     return json({});
@@ -132,7 +139,7 @@ function etatNeuf(over = {}) {
     admin: true, hs: false, email: 'cuisiniere@zaidat.test',
     base: [ligne(1), ligne(2), ligne(3)],
     reglages: {}, compteur: 0,
-    appels: [], photosSupprimees: [], diffs: [],
+    appels: [], photosSupprimees: [], diffs: [], refusStockage: false,
   }, over);
 }
 

@@ -501,6 +501,25 @@ window.SB = (function () {
         if (r.ok) return urlPublique(nomFichier);
 
         return r.text().then(function (t) {
+          /* Refus par la règle de sécurité du stockage. À traiter AVANT
+             le cas du jeton périmé : un refus de règle arrive lui aussi
+             en 403, et renouveler le jeton n'y changerait rien — on
+             renverrait la photo pour se faire refuser à l'identique.
+
+             Le message brut de Supabase (« new row violates row-level
+             security policy ») ne dit rien à la personne qui doit le
+             réparer : on nomme le dossier en cause et la seule action
+             utile. */
+          if (/row-level security|AccessDenied/i.test(t)) {
+            var dossier = String(nomFichier).split("/")[0];
+            throw new Error(
+              "La base refuse d'enregistrer une photo dans le dossier « " + dossier + " ». " +
+              "Relancez le script admin/supabase-installation.sql en entier dans le SQL Editor " +
+              "de Supabase, puis réessayez : c'est lui qui déclare les dossiers autorisés. " +
+              "Rien n'a été envoyé, votre photo est toujours là."
+            );
+          }
+
           var perime = r.status === 401 || r.status === 403 ||
             /exp.*claim|jwt expired|Unauthorized/i.test(t);
           if (perime && estConnecte() && !dejaReessaye) {

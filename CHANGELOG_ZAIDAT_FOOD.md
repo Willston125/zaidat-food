@@ -1,5 +1,27 @@
 # CHANGELOG — ZAIDAT FOOD
 
+## 2026-09-19 — Un dossier refusé par la base, et un message qui le disait en charabia
+
+L'envoi d'une affiche échouait sur
+`{"statusCode":"403","message":"new row violates row-level security policy"}`.
+La règle de sécurité du stockage était pourtant correcte : c'est la fonction
+qu'elle appelle pour valider le chemin qui, dans la base, était revenue à sa
+version d'avant l'ajout du dossier `affiches` — relancer une ancienne copie du
+script la remplace sans rien dire, et les règles, identiques d'une version à
+l'autre, ont l'air parfaitement en place.
+
+- **Le message d'erreur nomme maintenant le dossier refusé et la marche à
+  suivre**, au lieu de recracher le JSON de Supabase.
+- **Un refus de règle ne déclenche plus un renouvellement de jeton.** Il arrive
+  en 403, le même code qu'un jeton périmé : la photo repartait pour se faire
+  refuser à l'identique. Le refus de règle est désormais reconnu en premier.
+- **Un contrôle statique compare les trois listes de dossiers** — ceux que le
+  tableau de bord dépose, ceux que le nettoyage reconnaît, ceux que la base
+  autorise. Rien ne les reliait ; c'est ce qui a laissé passer l'oubli.
+- Le script SQL prévient de ne jamais relancer une ancienne copie, et donne la
+  requête qui dit ce qui est réellement installé.
+
+
 ## 2026-09-19 — La session du tableau de bord ne se perdait plus qu'à moitié
 
 Deux défauts distincts déconnectaient la cuisinière, chacun capable à lui
