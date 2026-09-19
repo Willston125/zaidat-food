@@ -40,6 +40,16 @@ const PHOTO = require('path').join(__dirname, '..', 'media', 'photo.jpg');
   await p.dispatchEvent('#af-alt', 'input');
   await p.selectOption('#af-lien', { index: 1 });
   await p.evaluate(() => { const f = document.querySelector('#af-fin'); f.value = '2030-01-01'; f.dispatchEvent(new Event('change', { bubbles: true })); });
+
+  /* Les deux reglages de repetition : c'est eux qui decident si
+     l'affiche sert a quelque chose ou si elle passe une fois et
+     disparait. */
+  A.tv('l ecran propose le rappel et la relance',
+       await p.evaluate(() => !!document.querySelector('#af-rappel') && !!document.querySelector('#af-relance')));
+  A.tv('le rappel est sur 30 minutes par defaut',
+       await p.evaluate(() => document.querySelector('#af-rappel').value) === '30');
+  await p.selectOption('#af-rappel', '60');
+  await p.selectOption('#af-relance', '3');
   await p.waitForTimeout(500);
   A.tv('le dashboard signale la modification', /non enregistr/i.test(await p.evaluate(() => document.querySelector('#etat-modifs').textContent)));
 
@@ -49,6 +59,9 @@ const PHOTO = require('path').join(__dirname, '..', 'media', 'photo.jpg');
   A.tv('L AFFICHE ARRIVE EN BASE', !!(site.affiche && site.affiche.image && site.affiche.actif));
   A.tv('avec son texte, son lien et sa date',
        site.affiche && site.affiche.alt && site.affiche.lien && site.affiche.finLe === '2030-01-01');
+  A.tv('ET SES REGLAGES DE REPETITION',
+       site.affiche && site.affiche.rappelMinutes === 60 && site.affiche.relanceDefilement === 3,
+       JSON.stringify({ r: site.affiche && site.affiche.rappelMinutes, d: site.affiche && site.affiche.relanceDefilement }));
 
   /* Remplacer l'affiche ne doit pas laisser l'ancienne image occuper
      le stockage pour toujours : le nettoyage doit reconnaitre le

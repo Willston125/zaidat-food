@@ -39,7 +39,7 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     await p.click('#sb-connecter'); await p.waitForTimeout(1500);
 
     console.log('\n--- dashboard a ' + largeur + ' px ---');
-    for (const vue of ['produits','categories','textes','contact','galerie','temoignages','connexion']) {
+    for (const vue of ['produits','categories','textes','contact','galerie','temoignages','affiche','connexion']) {
       const avant = err.length;
       await p.click('.adm-nav__item[data-vue="'+vue+'"]');
       await p.waitForTimeout(700);

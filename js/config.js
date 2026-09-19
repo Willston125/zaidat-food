@@ -147,6 +147,12 @@ const SITE_CONFIG = {
     lien: "",
     finLe: "",
     fermetureAuto: 0,
+    /* Au bout de combien de minutes un visiteur la revoit. 0 : une
+       seule fois. Le compte repart à chaque fois qu'il la ferme. */
+    rappelMinutes: 30,
+    /* Relance après N minutes de lecture sans aller commander.
+       0 : désactivée. Se règle depuis le tableau de bord. */
+    relanceDefilement: 0,
   },
 
   /* --- Réseaux sociaux (laisser vide si inexistants) ------- */
