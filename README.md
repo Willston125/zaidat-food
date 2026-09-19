@@ -24,7 +24,27 @@ Puis ouvrir <http://localhost:8123>.
 
 ## Dépôt GitHub
 
-Le code est publié sur **<https://github.com/Willston125/zaidat-food>** (dépôt privé).
+Le code est publié sur **<https://github.com/Willston125/zaidat-food>**, en dépôt
+**public**.
+
+Public ne veut pas dire ouvert : la sécurité du site ne repose sur rien de
+caché dans ces fichiers.
+
+- La clé Supabase présente dans `js/supabase-config.js` est la clé **`anon`**,
+  celle que le navigateur de chaque visiteur reçoit déjà. Elle est publique par
+  conception. Ce qu'un porteur de cette clé a le droit de faire est décidé par
+  les règles de la base, dans `admin/supabase-installation.sql` : lecture pour
+  tout le monde, écriture pour les seules personnes inscrites dans la table
+  `administrateurs`.
+- La clé `service_role`, elle, ne doit **jamais** entrer dans ce dépôt. Un
+  contrôle automatique la cherche à chaque exécution de `npm test`, sur tous
+  les fichiers suivis.
+
+```bash
+git add -A
+git commit -m "Description de la modification"
+git push
+```
 
 ```bash
 git add -A
