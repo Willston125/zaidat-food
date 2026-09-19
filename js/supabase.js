@@ -30,19 +30,42 @@ window.SB = (function () {
     return String(config().url).replace(/\/+$/, "");
   }
 
-  /* ---------- Session (conservée dans ce navigateur) ---------- */
+  /* ---------- Session (conservée dans ce navigateur) ----------
+     Le stockage du navigateur est la mémoire longue : c'est lui qui
+     permet de rester connectée d'un jour sur l'autre. Il peut être
+     refusé (navigation privée de certains navigateurs, cookies tiers
+     bloqués, quota plein) et `setItem` lève alors une exception. La
+     session est donc aussi gardée en mémoire : elle sera perdue au
+     rechargement, ce qui reste très préférable à une déconnexion au
+     milieu d'un enregistrement. */
+
+  var sessionMemoire = null;
 
   function lireSession() {
     try {
-      return JSON.parse(localStorage.getItem(CLE_SESSION)) || null;
-    } catch (e) {
-      return null;
-    }
+      var brut = localStorage.getItem(CLE_SESSION);
+      if (brut) {
+        var s = JSON.parse(brut);
+        if (s) return s;
+      }
+    } catch (e) { /* stockage refusé, ou contenu illisible */ }
+    return sessionMemoire;
   }
 
   function ecrireSession(s) {
-    if (s) localStorage.setItem(CLE_SESSION, JSON.stringify(s));
-    else localStorage.removeItem(CLE_SESSION);
+    sessionMemoire = s || null;
+    try {
+      if (s) localStorage.setItem(CLE_SESSION, JSON.stringify(s));
+      else localStorage.removeItem(CLE_SESSION);
+    } catch (e) { /* on garde au moins la session en mémoire */ }
+  }
+
+  /* Session réellement terminée : le jeton de rafraîchissement n'est
+     plus valable, il n'y a rien à sauver. À n'appeler QUE dans ce
+     cas — voir `erreurSession` plus bas. */
+  function terminerSession() {
+    ecrireSession(null);
+    oublierAutorisation();
   }
 
   function estConnecte() {
@@ -83,31 +106,151 @@ window.SB = (function () {
     }
   }
 
+  /* Marge avant expiration : on renouvelle le jeton un peu en avance
+     plutôt que de découvrir qu'il est périmé au milieu d'un envoi.
+     Cinq minutes, parce qu'une photo d'affiche (1080 × 1920) part en
+     une seule requête et qu'une connexion mobile lente peut mettre
+     plus de deux minutes à la téléverser. */
+  var MARGE_EXPIRATION = 300000;
+
   /* Garantit un jeton encore valide AVANT d'envoyer quoi que ce soit.
      Indispensable pour les photos : un envoi part en une seule fois,
-     et Supabase refuse un jeton périmé avec « exp claim check failed ».
-     Marge de 2 minutes, le temps que l'envoi aboutisse. */
+     et Supabase refuse un jeton périmé avec « exp claim check failed ». */
+  /* Horodatage du dernier échec passager, et durée pendant laquelle
+     on ne réessaie pas. Un enregistrement enchaîne des dizaines de
+     requêtes : sans ce répit, chacune rejouerait la même panne et
+     l'attente se multiplierait par le nombre de produits. */
+  var echecRenouvellement = 0;
+  var REPIT_ECHEC = 15000;
+
   function assurerJetonValide() {
     if (!estConnecte()) return Promise.resolve();
-    if (Date.now() < expirationJeton() - 120000) return Promise.resolve();
-    return rafraichir().catch(function () {
-      ecrireSession(null);
-      throw new Error("Votre session a expiré. Reconnectez-vous, vos modifications sont conservées.");
+    var expire = expirationJeton();
+    var maintenant = Date.now();
+    if (maintenant < expire - MARGE_EXPIRATION) return Promise.resolve();
+    /* Le jeton reste utilisable encore un moment (5 s de garde, le
+       temps que la requête parte) et un renouvellement vient
+       d'échouer : on part avec le jeton actuel sans réessayer. */
+    if (maintenant - echecRenouvellement < REPIT_ECHEC && maintenant < expire - 5000) {
+      return Promise.resolve();
+    }
+    return rafraichir().catch(function (e) {
+      if (e && !e.sessionFinie) {
+        echecRenouvellement = Date.now();
+        /* Renouvellement impossible pour une raison passagère, mais le
+           jeton actuel n'est pas encore périmé : on part avec lui plutôt
+           que de bloquer un enregistrement qui aurait parfaitement
+           abouti. C'est tout l'intérêt de renouveler en avance. */
+        if (Date.now() < expire - 5000) return null;
+      }
+      return traiterEchecRenouvellement(e);
     });
   }
 
+  /* Un échec de renouvellement n'a pas toujours le même sens, et
+     confondre les deux cas coûte une déconnexion :
+
+       • le serveur refuse le jeton de rafraîchissement (400 ou 401) :
+         la session est réellement finie, il faut se reconnecter ;
+       • le réseau a lâché, ou Supabase a répondu 429 / 500 : la
+         session est intacte. L'effacer déconnecterait la cuisinière
+         pour une coupure de trois secondes, au milieu d'un
+         enregistrement, sans aucun moyen de revenir en arrière.
+
+     `sessionFinie` porte cette distinction jusqu'aux appelants. */
+  function erreurSession(message, finie) {
+    var e = new Error(message);
+    e.sessionFinie = !!finie;
+    return e;
+  }
+
+  /* Seule une session réellement finie est effacée. Sur une coupure,
+     le jeton de rafraîchissement est conservé : la tentative suivante
+     repartira de là, sans reconnexion. */
+  function traiterEchecRenouvellement(e) {
+    if (e && e.sessionFinie) {
+      terminerSession();
+      throw new Error("Votre session a expiré. Reconnectez-vous, vos modifications sont conservées.");
+    }
+    throw new Error(
+      "Connexion au serveur perdue. Réessayez dans un instant — " +
+      "vous êtes toujours connectée et vos modifications sont conservées."
+    );
+  }
+
   /* Un jeton expire au bout d'une heure : on le renouvelle en
-     silence pour que la cuisinière ne soit pas déconnectée. */
+     silence pour que la cuisinière ne soit pas déconnectée.
+
+     UN SEUL renouvellement à la fois. Le jeton de rafraîchissement
+     est à usage unique : Supabase en délivre un nouveau et invalide
+     l'ancien. Or le dashboard part sur plusieurs requêtes en
+     parallèle — produits et réglages au chargement, textes et
+     catégories à l'enregistrement. Sans ce garde-fou elles
+     présentent toutes le MÊME jeton : la première le consomme, les
+     autres se font refuser, et une session parfaitement valide est
+     effacée. C'était la cause des déconnexions au retour sur le
+     dashboard. Tous les appels partagent donc la même promesse. */
+  var renouvellement = null;
+
   function rafraichir() {
+    if (renouvellement) return renouvellement;
+
     var s = lireSession();
-    if (!s || !s.refresh_token) return Promise.reject(new Error("Session absente"));
+    if (!s || !s.refresh_token) {
+      return Promise.reject(erreurSession("Session absente", true));
+    }
+
+    var promesse = envoyerRenouvellement(s.refresh_token, 1);
+    renouvellement = promesse;
+    function liberer() { if (renouvellement === promesse) renouvellement = null; }
+    promesse.then(liberer, liberer);
+    return promesse;
+  }
+
+  function attendre(ms) {
+    return new Promise(function (r) { setTimeout(r, ms); });
+  }
+
+  /* Une coupure réseau mérite une seconde tentative : sur une
+     connexion mobile, la première échoue parfois sans raison. Un
+     jeton refusé, lui, ne le sera pas moins au deuxième essai.
+
+     Réessayer vite n'est pas un hasard : si la première requête a
+     abouti côté serveur mais que la réponse s'est perdue, le jeton
+     a déjà été consommé. Supabase tolère qu'on le represente dans
+     les secondes qui suivent et renvoie alors la même session. */
+  function envoyerRenouvellement(jeton, essaisRestants) {
     return fetch(base() + "/auth/v1/token?grant_type=refresh_token", {
       method: "POST",
       headers: { apikey: config().anonKey, "Content-Type": "application/json" },
-      body: JSON.stringify({ refresh_token: s.refresh_token }),
+      body: JSON.stringify({ refresh_token: jeton }),
     })
-      .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error("Session expirée")); })
-      .then(function (d) { ecrireSession(d); return d; });
+      .then(
+        function (r) {
+          if (r.ok) return r.json();
+          /* 400 et 401 : c'est le jeton qui est rejeté. Tout le reste
+             (429, 500, 502, 504…) est passager. */
+          throw erreurSession(
+            "Renouvellement refusé (" + r.status + ")",
+            r.status === 400 || r.status === 401
+          );
+        },
+        function () { throw erreurSession("Serveur injoignable", false); }
+      )
+      .then(function (d) {
+        if (!d || !d.access_token) throw erreurSession("Réponse inattendue", false);
+        ecrireSession(d);
+        echecRenouvellement = 0;
+        return d;
+      })
+      .catch(function (e) {
+        if (!e.sessionFinie && essaisRestants > 0) {
+          return attendre(1500).then(function () {
+            return envoyerRenouvellement(jeton, essaisRestants - 1);
+          });
+        }
+        throw e;
+      });
   }
 
   /* Appel générique : réessaie une fois après renouvellement du jeton */
@@ -123,12 +266,14 @@ window.SB = (function () {
       });
     }).then(function (r) {
       if (r.status === 401 && estConnecte() && !dejaReessaye) {
-        return rafraichir()
-          .then(function () { return appel(chemin, options, true); })
-          .catch(function () {
-            ecrireSession(null);
-            throw new Error("Votre session a expiré, reconnectez-vous.");
-          });
+        /* Le gestionnaire d'échec est passé en second argument, et non
+           dans un `.catch` : sinon il attraperait aussi les erreurs du
+           nouvel appel et ferait passer un refus de la base pour une
+           session expirée. */
+        return rafraichir().then(
+          function () { return appel(chemin, options, true); },
+          traiterEchecRenouvellement
+        );
       }
       if (!r.ok) {
         return r.text().then(function (t) {
@@ -339,12 +484,10 @@ window.SB = (function () {
           var perime = r.status === 401 || r.status === 403 ||
             /exp.*claim|jwt expired|Unauthorized/i.test(t);
           if (perime && estConnecte() && !dejaReessaye) {
-            return rafraichir()
-              .then(function () { return televerserPhoto(blob, nomFichier, true); })
-              .catch(function () {
-                ecrireSession(null);
-                throw new Error("Votre session a expiré. Reconnectez-vous, puis renvoyez la photo.");
-              });
+            return rafraichir().then(
+              function () { return televerserPhoto(blob, nomFichier, true); },
+              traiterEchecRenouvellement
+            );
           }
           throw new Error("Envoi de la photo impossible : " + t);
         });
@@ -368,7 +511,7 @@ window.SB = (function () {
     if (u.indexOf(prefixe) !== 0) return null;
     var chemin = u.slice(prefixe.length).split("?")[0];
     /* Mêmes dossiers que ceux autorisés par les règles de la base. */
-    if (!/^(produits|lifestyle|galerie)\/[A-Za-z0-9][A-Za-z0-9._-]*\.(jpg|jpeg|png|webp)$/i.test(chemin)) {
+    if (!/^(produits|lifestyle|galerie|affiches)\/[A-Za-z0-9][A-Za-z0-9._-]*\.(jpg|jpeg|png|webp)$/i.test(chemin)) {
       return null;
     }
     return chemin;

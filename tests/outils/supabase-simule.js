@@ -17,6 +17,18 @@ function bilan(titre) {
   return ko;
 }
 
+/* Jeton d'acces credible : seul son champ `exp` est lu par le site. */
+function jeton(secondes) {
+  const charge = Buffer.from(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + secondes })).toString('base64url');
+  return 'a.' + charge + '.b';
+}
+
+/* Etat d'authentification facultatif, a joindre a `etatNeuf` pour que
+   le faux serveur applique la regle du jeton a usage unique. */
+function authNeuve(over = {}) {
+  return Object.assign({ courant: 'r0', appels: 0, refus: 0, forcer: null }, over);
+}
+
 function ligne(i, extra = {}) {
   return Object.assign({
     id: 'id-' + i, slug: 'produit-' + i, nom: 'Produit ' + i,
@@ -43,8 +55,24 @@ function creerServeur(etat) {
       route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 
     if (url.includes('/auth/v1/token')) {
-      const charge = Buffer.from(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 3600 })).toString('base64url');
-      return json({ access_token: 'a.' + charge + '.b', refresh_token: 'r', user: { email: etat.email } });
+      /* Sans `etat.auth`, l'authentification dit toujours oui : c'est
+         ce dont les autres suites ont besoin. Avec, elle se comporte
+         comme le vrai GoTrue — le jeton de rafraichissement ne sert
+         QU'UNE FOIS, le represente vaut « Already Used ». */
+      const a = etat.auth;
+      if (a && url.includes('grant_type=refresh_token')) {
+        a.appels++;
+        if (a.forcer) { a.refus++; return json({ message: 'panne simulee' }, a.forcer); }
+        const envoye = (JSON.parse(req.postData() || '{}') || {}).refresh_token;
+        if (envoye !== a.courant) {
+          a.refus++;
+          return json({ error: 'invalid_grant',
+                        error_description: 'Invalid Refresh Token: Already Used' }, 400);
+        }
+        a.courant = 'r' + a.appels;
+      }
+      return json({ access_token: jeton(3600),
+                    refresh_token: (a && a.courant) || 'r', user: { email: etat.email } });
     }
     if (url.includes('/rpc/est_administrateur')) return json(etat.admin);
     if (url.includes('/rest/v1/administrateurs')) return json(etat.admin ? [{ id: 'u1' }] : []);
@@ -167,4 +195,4 @@ async function enregistrer(p, attente = 3000) {
 }
 
 module.exports = { chromium, BASE, EXE, PROJET, tv, bilan, ligne, etatNeuf, ouvrir, connecter, enregistrer,
-                   compteurs: () => ({ ok, ko }) };
+                   jeton, authNeuve, compteurs: () => ({ ok, ko }) };

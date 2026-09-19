@@ -49,6 +49,31 @@ const PHOTO = require('path').join(__dirname, '..', 'media', 'photo.jpg');
   A.tv('L AFFICHE ARRIVE EN BASE', !!(site.affiche && site.affiche.image && site.affiche.actif));
   A.tv('avec son texte, son lien et sa date',
        site.affiche && site.affiche.alt && site.affiche.lien && site.affiche.finLe === '2030-01-01');
+
+  /* Remplacer l'affiche ne doit pas laisser l'ancienne image occuper
+     le stockage pour toujours : le nettoyage doit reconnaitre le
+     dossier « affiches » comme il reconnait « produits ». */
+  const ancienne = site.affiche.image.split('/photos/')[1];
+  etat.photosSupprimees.length = 0;
+  /* La modale d'enregistrement reste ouverte sur son compte rendu. */
+  await p.evaluate(() => { document.querySelector('#modale-publier').hidden = true; });
+  await p.click('.adm-nav__item[data-vue="affiche"]');
+  await p.waitForTimeout(500);
+  await p.setInputFiles('#af-fichier', PHOTO);
+  await p.waitForTimeout(2500);
+  await p.click('.adm-modale [data-valider]');
+  await p.waitForTimeout(4000);
+  await A.enregistrer(p, 10000);
+
+  const neuve = (etat.reglages.site.affiche || {}).image;
+  A.tv('la nouvelle affiche remplace bien l ancienne',
+       !!neuve && neuve !== site.affiche.image, neuve && neuve.split('/').pop());
+  A.tv('L ANCIENNE IMAGE EST LIBEREE DU STOCKAGE',
+       etat.photosSupprimees.indexOf(ancienne) !== -1,
+       'supprimees : ' + JSON.stringify(etat.photosSupprimees));
+  A.tv('la nouvelle, elle, est conservee',
+       etat.photosSupprimees.indexOf(neuve.split('/photos/')[1]) === -1);
+
   A.tv('aucune erreur JavaScript', erreurs.length === 0, erreurs.join(' | '));
   await c.close(); await b.close();
   process.exit(A.bilan('AFFICHE — dashboard') ? 1 : 0);

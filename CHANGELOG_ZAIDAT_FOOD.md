@@ -1,5 +1,41 @@
 # CHANGELOG — ZAIDAT FOOD
 
+## 2026-09-19 — La session du tableau de bord ne se perdait plus qu'à moitié
+
+Deux défauts distincts déconnectaient la cuisinière, chacun capable à lui
+seul de produire « reconnectez-vous » au moment d'enregistrer une affiche.
+
+- **Deux renouvellements de jeton partis en même temps.** Le jeton de
+  rafraîchissement Supabase ne sert **qu'une fois** : le présenter deux fois
+  vaut « Already Used ». Or le tableau de bord lance plusieurs requêtes en
+  parallèle — produits et réglages au chargement, textes et catégories à
+  l'enregistrement. Au retour sur le dashboard, la première requête
+  consommait le jeton, la seconde se faisait refuser, et une session
+  parfaitement valide était effacée. Tous les appels partagent désormais un
+  seul renouvellement.
+- **Une coupure réseau effaçait la session.** N'importe quel échec —
+  Wi-Fi qui saute, Supabase qui répond 500, deux secondes de tunnel —
+  supprimait le jeton de rafraîchissement, c'est-à-dire la seule chose qui
+  évite de retaper son mot de passe. Seul un refus explicite du serveur
+  (400 ou 401) termine maintenant la session ; le reste est traité comme
+  passager, avec une seconde tentative et un message qui dit la vérité :
+  « réessayez dans un instant, vous êtes toujours connectée ».
+- Si le jeton actuel est encore valable, une panne de renouvellement ne
+  bloque plus l'enregistrement : la requête part avec le jeton en cours
+  plutôt que d'échouer par précaution. Le renouvellement anticipé passe de
+  2 à 5 minutes — une photo d'affiche en 1080 × 1920 part en une seule
+  requête et peut dépasser deux minutes sur une connexion mobile.
+- La session est aussi gardée **en mémoire** quand le navigateur refuse son
+  stockage (navigation privée, cookies tiers bloqués, quota plein). Elle ne
+  survivra pas au rechargement, mais plus aux clics.
+- **Les anciennes affiches restaient dans le stockage.** Le nettoyage
+  reconnaissait `produits`, `lifestyle` et `galerie`, mais pas `affiches` :
+  chaque remplacement laissait un fichier de 1080 × 1920 derrière lui.
+
+Un banc d'essai reproduit le jeton à usage unique du vrai Supabase :
+`tests/dashboard/12-session.js` échoue sur l'ancien code et passe sur le
+nouveau.
+
 ## 2026-09-19 — Affiche d'annonce, partage, et nom de domaine
 
 ### Affiche d'annonce
